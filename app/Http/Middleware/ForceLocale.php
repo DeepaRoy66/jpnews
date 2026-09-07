@@ -9,13 +9,18 @@ use App;
 class ForceLocale
 {
     /**
-     * Usage in routes: ->middleware('locale:en')  or  ->middleware('locale:ne')
-     * The locale is now determined by WHICH DOMAIN the request came in on,
-     * not by session — so links, sharing, and SEO all stay consistent
-     * per-domain (exactly like english.onlinekhabar.com vs onlinekhabar.com).
+     * No route parameter needed anymore. We look at the actual domain
+     * the request came in on: english.<domain> => 'en', anything else => 'ne'.
+     * This means route('news.show', ...) etc. only ever needs to be
+     * defined ONCE — Laravel will naturally keep links on whichever
+     * domain the visitor is currently browsing.
      */
-    public function handle(Request $request, Closure $next, string $locale)
+    public function handle(Request $request, Closure $next)
     {
+        $locale = $request->getHost() === 'english.' . config('app.domain')
+            ? 'en'
+            : 'ne';
+
         App::setLocale($locale);
 
         return $next($request);
