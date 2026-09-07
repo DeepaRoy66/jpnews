@@ -89,7 +89,7 @@
         </div>
         <div class="col-4 site-logo">
             <a href="{{ route('home') }}">
-                {{-- 👇 Dummy placeholder — imgbb bata aafno logo link haleर replace garnuhos --}}
+            
                 <img src="https://i.ibb.co/jvRxptRz/jitesh-pradhan-production-png.png" alt="MeroNews">
                 <p class="brand-tagline">तपाईंको भरपर्दो समाचार स्रोत</p>
             </a>
