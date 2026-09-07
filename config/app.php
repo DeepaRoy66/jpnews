@@ -27,6 +27,7 @@ return [
     */
 
     'env' => env('APP_ENV', 'production'),
+    'domain' => env('APP_DOMAIN', 'meronews.test'),
 
     /*
     |--------------------------------------------------------------------------

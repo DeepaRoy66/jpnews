@@ -9,10 +9,20 @@ use App\Http\Controllers\Frontend\NewsController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-// ---------- FRONTEND ----------
-Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/category/{slug}', [HomeController::class, 'category'])->name('category.show');
-Route::get('/news/{slug}', [NewsController::class, 'show'])->name('news.show');
+// ---------- FRONTEND (subdomain-based locale) ----------
+// english.meronews.test  ->  English site
+Route::domain('english.' . config('app.domain'))->middleware('locale:en')->group(function () {
+    Route::get('/', [HomeController::class, 'index'])->name('home');
+    Route::get('/category/{slug}', [HomeController::class, 'category'])->name('category.show');
+    Route::get('/news/{slug}', [NewsController::class, 'show'])->name('news.show');
+});
+
+// meronews.test  ->  Nepali site (main domain)
+Route::domain(config('app.domain'))->middleware('locale:ne')->group(function () {
+    Route::get('/', [HomeController::class, 'index'])->name('home');
+    Route::get('/category/{slug}', [HomeController::class, 'category'])->name('category.show');
+    Route::get('/news/{slug}', [NewsController::class, 'show'])->name('news.show');
+});
 
 // ---------- BREEZE (login/register related) ----------
 Route::middleware('auth')->group(function () {

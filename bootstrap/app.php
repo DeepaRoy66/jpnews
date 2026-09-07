@@ -12,7 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'admin' => \App\Http\Middleware\IsAdmin::class,
+            'admin'  => \App\Http\Middleware\IsAdmin::class,
+            'locale' => \App\Http\Middleware\ForceLocale::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
