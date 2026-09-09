@@ -99,11 +99,23 @@
             </a>
         </div>
         <div class="col-4">
+            @php
+                // Build the target URL using whatever scheme/port the
+                // visitor is CURRENTLY using — works both in local dev
+                // (http + :8000) and production (https, no port needed)
+                // without hardcoding a scheme.
+                $portSuffix = in_array(request()->getPort(), [80, 443]) ? '' : ':' . request()->getPort();
+                $scheme = request()->getScheme();
+                $targetHost = app()->getLocale() === 'ne'
+                    ? 'english.' . config('app.domain')
+                    : config('app.domain');
+                $switchUrl = $scheme . '://' . $targetHost . $portSuffix;
+            @endphp
             <div class="header-actions">
                 @if(app()->getLocale() === 'ne')
-                    <a href="{{ 'https://english.' . config('app.domain') }}" class="lang-switch" title="Switch to English">EN</a>
+                    <a href="{{ $switchUrl }}" class="lang-switch" title="Switch to English">EN</a>
                 @else
-                    <a href="{{ 'https://' . config('app.domain') }}" class="lang-switch" title="{{ __('site.switch_to_nepali') }}">{{ __('site.nepali_label') }}</a>
+                    <a href="{{ $switchUrl }}" class="lang-switch" title="{{ __('site.switch_to_nepali') }}">{{ __('site.nepali_label') }}</a>
                 @endif
                 <a href="#" title="Menu"><i class="bi bi-list fs-3"></i></a>
                 <a href="#" title="Search"><i class="bi bi-search"></i></a>
