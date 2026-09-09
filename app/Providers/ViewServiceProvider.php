@@ -13,10 +13,16 @@ class ViewServiceProvider extends ServiceProvider
     public function boot(): void
     {
         View::composer('frontend.layouts.app', function ($view) {
+            $locale = app()->getLocale();
+
+            $categories = Category::with('translations')->get()->filter(function ($cat) use ($locale) {
+                return $cat->nameIn($locale) !== null;
+            })->values();
+
             $view->with([
-                'navbarAd'     => Ad::active('navbar')->latest()->first(),
-                'navCategories' => Category::orderBy('name')->get(),
-                'breakingNews' => News::published()->latest('published_at')->take(8)->get(),
+                'navbarAd'      => Ad::active('navbar')->latest()->first(),
+                'navCategories' => $categories,
+                'breakingNews'  => News::published()->where('locale', $locale)->latest('published_at')->take(8)->get(),
             ]);
         });
     }

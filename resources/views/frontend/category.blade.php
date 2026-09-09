@@ -8,7 +8,7 @@
     <div class="cat-banner-icon"><i class="bi {{ $icon }}"></i></div>
     <div>
         <h2>{{ $categoryName }}</h2>
-        <span class="cat-banner-sub">ताजा अपडेट र समाचार</span>
+        <span class="cat-banner-sub">{{ __('site.fresh_updates') }}</span>
     </div>
 </div>
 
@@ -33,7 +33,7 @@
                             </div>
                         </div>
                     @empty
-                        <div class="empty-state"><i class="bi bi-inbox"></i><p>हाल कुनै समाचार छैन।</p></div>
+                        <div class="empty-state"><i class="bi bi-inbox"></i><p>{{ __('site.no_news') }}</p></div>
                     @endforelse
                 </div>
                 @break
@@ -54,7 +54,7 @@
                             </div>
                         </div>
                     @empty
-                        <div class="empty-state"><i class="bi bi-inbox"></i><p>हाल कुनै समाचार छैन।</p></div>
+                        <div class="empty-state"><i class="bi bi-inbox"></i><p>{{ __('site.no_news') }}</p></div>
                     @endforelse
                 </div>
                 @break
@@ -68,10 +68,10 @@
                                 <a href="{{ route('news.show', $item->slug) }}">
                                     <img src="{{ $item->image ? asset('storage/'.$item->image) : 'https://placehold.co/900x480?text=No+Image' }}" loading="lazy">
                                     <div class="biggrid-hero-overlay">
-                                        <span class="biggrid-hero-tag" style="background: {{ $accent }};"><i class="bi {{ $icon }}"></i> ताजा</span>
+                                        <span class="biggrid-hero-tag" style="background: {{ $accent }};"><i class="bi {{ $icon }}"></i> {{ __('site.latest_news') }}</span>
                                         <h3>{{ $item->title }}</h3>
                                         <p>{{ Str::limit($item->excerpt, 130) }}</p>
-                                        <div class="news-meta light">{{ $item->published_at?->diffForHumans() }} <span class="dot">•</span> {{ $item->views }} views</div>
+                                        <div class="news-meta light">{{ $item->published_at?->diffForHumans() }} <span class="dot">•</span> {{ $item->views }} {{ __('site.times_suffix') }}</div>
                                     </div>
                                 </a>
                             </div>
@@ -84,7 +84,7 @@
                                     <img src="{{ $item->image ? asset('storage/'.$item->image) : 'https://placehold.co/500x320?text=No+Image' }}" loading="lazy">
                                     <div class="biggrid-overlay">
                                         <h5>{{ $item->title }}</h5>
-                                        <div class="news-meta light">{{ $item->published_at?->diffForHumans() }} <span class="dot">•</span> {{ $item->views }} views</div>
+                                        <div class="news-meta light">{{ $item->published_at?->diffForHumans() }} <span class="dot">•</span> {{ $item->views }} {{ __('site.times_suffix') }}</div>
                                     </div>
                                 </a>
                             </div>
@@ -94,7 +94,7 @@
                             </div>
                         @endif
                     @empty
-                        <div class="empty-state"><i class="bi bi-inbox"></i><p>हाल कुनै समाचार छैन।</p></div>
+                        <div class="empty-state"><i class="bi bi-inbox"></i><p>{{ __('site.no_news') }}</p></div>
                     @endforelse
                 </div>
                 @break
@@ -110,7 +110,7 @@
                             </a>
                         </div>
                     @empty
-                        <div class="empty-state"><i class="bi bi-inbox"></i><p>हाल कुनै समाचार छैन।</p></div>
+                        <div class="empty-state"><i class="bi bi-inbox"></i><p>{{ __('site.no_news') }}</p></div>
                     @endforelse
                 </div>
                 @break
@@ -131,7 +131,7 @@
                             </div>
                         </div>
                     @empty
-                        <div class="empty-state"><i class="bi bi-inbox"></i><p>हाल कुनै समाचार छैन।</p></div>
+                        <div class="empty-state"><i class="bi bi-inbox"></i><p>{{ __('site.no_news') }}</p></div>
                     @endforelse
                 </div>
                 @break
@@ -149,7 +149,7 @@
                             </div>
                         </div>
                     @empty
-                        <div class="empty-state"><i class="bi bi-inbox"></i><p>हाल कुनै समाचार छैन।</p></div>
+                        <div class="empty-state"><i class="bi bi-inbox"></i><p>{{ __('site.no_news') }}</p></div>
                     @endforelse
                 </div>
                 @break
@@ -172,7 +172,7 @@
                             </div>
                         </div>
                     @empty
-                        <div class="empty-state"><i class="bi bi-inbox"></i><p>हाल कुनै समाचार छैन।</p></div>
+                        <div class="empty-state"><i class="bi bi-inbox"></i><p>{{ __('site.no_news') }}</p></div>
                     @endforelse
                 </div>
                 @break
@@ -186,27 +186,27 @@
 
     <div class="col-lg-4">
         <div class="sidebar-box mb-4">
-            <h5 class="sidebar-title" style="border-color: {{ $accent }};"><i class="bi bi-fire" style="color: {{ $accent }};"></i> बढी पढिएका</h5>
+            <h5 class="sidebar-title" style="border-color: {{ $accent }};"><i class="bi bi-fire" style="color: {{ $accent }};"></i> {{ __('site.trending') }}</h5>
             <ul class="trending-list">
                 @forelse($trending as $index => $t)
                     <li>
                         <span class="trending-number" style="color: {{ $accent }};">{{ $index + 1 }}</span>
                         <div>
                             <a href="{{ route('news.show', $t->slug) }}" class="trending-title">{{ $t->title }}</a>
-                            <div class="news-meta"><i class="bi bi-eye"></i> {{ $t->views }} पटक</div>
+                            <div class="news-meta"><i class="bi bi-eye"></i> {{ $t->views }} {{ __('site.times_suffix') }}</div>
                         </div>
                     </li>
                 @empty
-                    <li class="trending-empty">अहिलेसम्म डाटा छैन।</li>
+                    <li class="trending-empty">{{ __('site.no_data') }}</li>
                 @endforelse
             </ul>
         </div>
 
         <div class="sidebar-ad-box">
-            <span class="ad-label">विज्ञापन</span>
+            <span class="ad-label">{{ __('site.ad_space') }}</span>
             <div class="ad-placeholder">
                 <i class="bi bi-image"></i>
-                <p>Advertisement Space</p>
+                <p>{{ __('site.ad_placeholder') }}</p>
             </div>
         </div>
     </div>

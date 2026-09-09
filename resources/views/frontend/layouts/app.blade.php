@@ -17,16 +17,20 @@
         .breaking-ticker-track { display: inline-block; padding-left: 100%; animation: ticker 35s linear infinite; }
         .breaking-ticker-track span { margin-right: 60px; font-size: 14px; color: #eee; }
         @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
-        .site-header { padding: 20px 0 8px; }
+        .site-header { padding: 26px 0 14px; }
         .social-icons { display: flex; align-items: center; gap: 16px; }
         .social-icons a { color: #333; font-size: 20px; }
         .social-icons a:hover { color: #e30613; }
         .site-logo { text-align: center; }
-        .site-logo img { height: 55px; width: auto; max-width: 220px; object-fit: contain; }
-        .site-logo .brand-tagline { font-size: 12px; color: #777; margin-top: 4px; }
+        .site-logo a { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; }
+        .site-logo img { height: 62px; width: auto; max-width: 230px; object-fit: contain; image-rendering: -webkit-optimize-contrast; transition: transform .2s ease, filter .2s ease; }
+        .site-logo a:hover img { transform: scale(1.03); }
+        .site-logo .brand-tagline { font-size: 12.5px; color: #888; margin: 0; letter-spacing: .3px; font-weight: 600; }
         .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 20px; }
         .header-actions a { color: #333; font-size: 20px; cursor: pointer; }
         .header-actions a:hover { color: #e30613; }
+        .lang-switch { font-size: 13px !important; font-weight: 700; border: 1.5px solid #ddd; border-radius: 20px; padding: 5px 14px; color: #333 !important; }
+        .lang-switch:hover { border-color: #e30613; background: #e30613; color: #fff !important; }
         .site-date { text-align: center; font-size: 14px; color: #666; padding: 8px 0; }
         .category-nav { border-top: 1px solid #e5e5e5; border-bottom: 1px solid #e5e5e5; }
         .category-nav .nav { justify-content: center; flex-wrap: wrap; }
@@ -65,13 +69,13 @@
 <body>
 
 <div class="breaking-bar">
-    <div class="breaking-badge">🔴 ब्रेकिङ</div>
+    <div class="breaking-badge">🔴 {{ __('site.breaking') }}</div>
     <div class="breaking-ticker">
         <div class="breaking-ticker-track">
             @forelse($breakingNews as $item)
                 <span>{{ $item->title }}</span>
             @empty
-                <span>ताजा समाचारका लागि हाम्रो साइटमा भ्रमण गर्नुहोस्</span>
+                <span>{{ __('site.no_news') }}</span>
             @endforelse
         </div>
     </div>
@@ -89,13 +93,18 @@
         </div>
         <div class="col-4 site-logo">
             <a href="{{ route('home') }}">
-            
-                <img src="https://i.ibb.co/jvRxptRz/jitesh-pradhan-production-png.png" alt="MeroNews">
-                <p class="brand-tagline">तपाईंको भरपर्दो समाचार स्रोत</p>
+                {{-- 👇 Dummy placeholder — imgbb bata aafno logo link haleर replace garnuhos --}}
+                <img src="https://i.ibb.co/0jqz1234/meronews-logo-placeholder.png" alt="MeroNews">
+                <p class="brand-tagline">{{ __('site.tagline') }}</p>
             </a>
         </div>
         <div class="col-4">
             <div class="header-actions">
+                @if(app()->getLocale() === 'ne')
+                    <a href="{{ 'https://english.' . config('app.domain') }}" class="lang-switch" title="Switch to English">EN</a>
+                @else
+                    <a href="{{ 'https://' . config('app.domain') }}" class="lang-switch" title="{{ __('site.switch_to_nepali') }}">{{ __('site.nepali_label') }}</a>
+                @endif
                 <a href="#" title="Menu"><i class="bi bi-list fs-3"></i></a>
                 <a href="#" title="Search"><i class="bi bi-search"></i></a>
                 <a href="#" id="themeToggle" title="Dark Mode"><i class="bi bi-moon"></i></a>
@@ -111,7 +120,7 @@
 <nav class="category-nav">
     <div class="container">
         <ul class="nav">
-            <li class="nav-item"><a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">ताजा समाचार</a></li>
+            <li class="nav-item"><a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">{{ __('site.latest_news') }}</a></li>
             @foreach($navCategories as $cat)
                 <li class="nav-item">
                     <a class="nav-link {{ request()->is('category/'.$cat->slug) ? 'active' : '' }}" href="{{ route('category.show', $cat->slug) }}">{{ $cat->name }}</a>
@@ -137,13 +146,13 @@
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-6 mb-3 mb-md-0">
-                <h5>ताजा समाचार सीधा तपाईंको इमेलमा पाउनुहोस्</h5>
-                <p>हरेक दिन बिहान महत्वपूर्ण समाचार सारांश पाउन सब्स्क्राइब गर्नुहोस्</p>
+                <h5>{{ __('site.newsletter_title') }}</h5>
+                <p>{{ __('site.newsletter_sub') }}</p>
             </div>
             <div class="col-md-6">
                 <form class="d-flex newsletter-form" onsubmit="return false;">
-                    <input type="email" placeholder="तपाईंको इमेल राख्नुहोस्" required>
-                    <button type="submit">सब्स्क्राइब</button>
+                    <input type="email" placeholder="{{ __('site.newsletter_placeholder') }}" required>
+                    <button type="submit">{{ __('site.subscribe') }}</button>
                 </form>
             </div>
         </div>
@@ -154,9 +163,9 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-4 col-md-6 mb-4">
-                <h5>MeroNews बारे</h5>
+                <h5>MeroNews {{ __('site.about_us') }}</h5>
                 <div class="footer-about">
-                    <p>नेपालको भरपर्दो अनलाइन समाचार पोर्टल। हामी राजनीति, अर्थतन्त्र, खेलकुद, मनोरञ्जन र प्रविधिसम्बन्धी ताजा र विश्वसनीय समाचार २४ घण्टै प्रकाशित गर्दछौं।</p>
+                    <p>{{ __('site.about_text') }}</p>
                 </div>
                 <div class="footer-social mt-3">
                     <a href="#"><i class="bi bi-facebook"></i></a>
@@ -167,7 +176,7 @@
                 </div>
             </div>
             <div class="col-lg-2 col-md-6 mb-4">
-                <h5>समाचार श्रेणी</h5>
+                <h5>{{ __('site.news_categories') }}</h5>
                 <ul class="footer-links">
                     @foreach($navCategories->take(5) as $cat)
                         <li><i class="bi bi-chevron-right"></i><a href="{{ route('category.show', $cat->slug) }}">{{ $cat->name }}</a></li>
@@ -175,23 +184,23 @@
                 </ul>
             </div>
             <div class="col-lg-2 col-md-6 mb-4">
-                <h5>छिटो लिङ्क</h5>
+                <h5>{{ __('site.quick_links') }}</h5>
                 <ul class="footer-links">
-                    <li><i class="bi bi-chevron-right"></i><a href="{{ route('home') }}">गृहपृष्ठ</a></li>
-                    <li><i class="bi bi-chevron-right"></i><a href="#">हाम्रो बारे</a></li>
-                    <li><i class="bi bi-chevron-right"></i><a href="#">विज्ञापन</a></li>
-                    <li><i class="bi bi-chevron-right"></i><a href="#">गोपनीयता नीति</a></li>
-                    <li><i class="bi bi-chevron-right"></i><a href="#">सम्पर्क</a></li>
+                    <li><i class="bi bi-chevron-right"></i><a href="{{ route('home') }}">{{ __('site.home') }}</a></li>
+                    <li><i class="bi bi-chevron-right"></i><a href="#">{{ __('site.about_us') }}</a></li>
+                    <li><i class="bi bi-chevron-right"></i><a href="#">{{ __('site.advertise') }}</a></li>
+                    <li><i class="bi bi-chevron-right"></i><a href="#">{{ __('site.privacy_policy') }}</a></li>
+                    <li><i class="bi bi-chevron-right"></i><a href="#">{{ __('site.contact') }}</a></li>
                 </ul>
             </div>
             <div class="col-lg-4 col-md-6 mb-4">
-                <h5>सम्पर्क ठेगाना</h5>
+                <h5>{{ __('site.contact_address') }}</h5>
                 <ul class="footer-links footer-contact">
-                    <li><i class="bi bi-geo-alt-fill"></i> काठमाडौं, नेपाल</li>
+                    <li><i class="bi bi-geo-alt-fill"></i> {{ __('site.address') }}</li>
                     <li><i class="bi bi-envelope-fill"></i> info@meronews.com</li>
-                    <li><i class="bi bi-telephone-fill"></i> ०१-४xxxxxx</li>
+                    <li><i class="bi bi-telephone-fill"></i> {{ __('site.phone') }}</li>
                 </ul>
-                <h5 class="mt-4">एप डाउनलोड गर्नुहोस्</h5>
+                <h5 class="mt-4">{{ __('site.download_app') }}</h5>
                 <div class="app-badges">
                     <a href="#"><i class="bi bi-google-play"></i> Google Play</a>
                     <a href="#"><i class="bi bi-apple"></i> App Store</a>
@@ -199,10 +208,10 @@
             </div>
         </div>
         <div class="footer-bottom d-flex flex-wrap justify-content-between align-items-center">
-            <div>&copy; {{ date('Y') }} MeroNews. सर्वाधिकार सुरक्षित।</div>
+            <div>&copy; {{ date('Y') }} MeroNews. {{ __('site.rights_reserved') }}</div>
             <div>
-                <a href="#">गोपनीयता नीति</a>
-                <a href="#">सर्तहरू</a>
+                <a href="#">{{ __('site.privacy_policy') }}</a>
+                <a href="#">{{ __('site.terms') }}</a>
                 <a href="#">Sitemap</a>
             </div>
         </div>

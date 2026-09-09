@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\CategoryTranslation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -11,7 +12,7 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::latest()->paginate(15);
+        $categories = Category::with('translations')->latest()->paginate(15);
         return view('admin.categories.index', compact('categories'));
     }
 
@@ -23,32 +24,42 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name' => 'required|string|max:255',
+            'slug' => 'required|string|max:255|alpha_dash|unique:categories,slug',
+            'name_ne' => 'required_without:name_en|nullable|string|max:255',
+            'name_en' => 'required_without:name_ne|nullable|string|max:255',
         ]);
 
-        $slug = Str::slug($data['name']);
-        $data['slug'] = $slug ?: 'category-' . uniqid();
+        $category = Category::create(['slug' => Str::slug($data['slug'])]);
 
-        Category::create($data);
+        if (!empty($data['name_ne'])) {
+            CategoryTranslation::create(['category_id' => $category->id, 'locale' => 'ne', 'name' => $data['name_ne']]);
+        }
+        if (!empty($data['name_en'])) {
+            CategoryTranslation::create(['category_id' => $category->id, 'locale' => 'en', 'name' => $data['name_en']]);
+        }
 
         return redirect()->route('admin.categories.index')->with('success', 'Category created.');
     }
 
     public function edit(Category $category)
     {
+        $category->load('translations');
         return view('admin.categories.edit', compact('category'));
     }
 
     public function update(Request $request, Category $category)
     {
         $data = $request->validate([
-            'name' => 'required|string|max:255',
+            'name_ne' => 'required_without:name_en|nullable|string|max:255',
+            'name_en' => 'required_without:name_ne|nullable|string|max:255',
         ]);
 
-        $slug = Str::slug($data['name']);
-        $data['slug'] = $slug ?: $category->slug;
-
-        $category->update($data);
+        if (!empty($data['name_ne'])) {
+            CategoryTranslation::updateOrCreate(['category_id' => $category->id, 'locale' => 'ne'], ['name' => $data['name_ne']]);
+        }
+        if (!empty($data['name_en'])) {
+            CategoryTranslation::updateOrCreate(['category_id' => $category->id, 'locale' => 'en'], ['name' => $data['name_en']]);
+        }
 
         return redirect()->route('admin.categories.index')->with('success', 'Category updated.');
     }

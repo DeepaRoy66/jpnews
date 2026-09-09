@@ -3,76 +3,46 @@
 @section('content')
 <h4>Edit News</h4>
 
-<div class="admin-card">
 <form action="{{ route('admin.news.update', $news) }}" method="POST" enctype="multipart/form-data">
     @csrf @method('PUT')
+
+    <div class="mb-3">
+        <label>भाषा / Language</label>
+        <div>
+            <label class="me-3"><input type="radio" name="locale" value="ne" {{ old('locale', $news->locale) == 'ne' ? 'checked' : '' }}> नेपाली</label>
+            <label><input type="radio" name="locale" value="en" {{ old('locale', $news->locale) == 'en' ? 'checked' : '' }}> English</label>
+        </div>
+        @error('locale') <small class="text-danger">{{ $message }}</small> @enderror
+    </div>
 
     <div class="mb-3">
         <label>Category</label>
         <select name="category_id" class="form-control" required>
             @foreach($categories as $category)
                 <option value="{{ $category->id }}" {{ old('category_id', $news->category_id) == $category->id ? 'selected' : '' }}>
-                    {{ $category->name }}
+                    {{ $category->nameIn('ne') ?? $category->nameIn('en') }} ({{ $category->slug }})
                 </option>
             @endforeach
         </select>
         @error('category_id') <small class="text-danger">{{ $message }}</small> @enderror
     </div>
 
-    {{-- ===== Language tabs ===== --}}
-    <ul class="nav nav-tabs mb-3" id="langTab" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="ne-tab" data-bs-toggle="tab" data-bs-target="#ne-pane" type="button" role="tab">
-                नेपाली
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="en-tab" data-bs-toggle="tab" data-bs-target="#en-pane" type="button" role="tab">
-                English
-            </button>
-        </li>
-    </ul>
-    <p class="text-muted small mb-3">कम्तिमा एउटा भाषा (नेपाली वा English) मा title र body भर्नु अनिवार्य छ।</p>
-
-    <div class="tab-content mb-3">
-        {{-- Nepali pane --}}
-        <div class="tab-pane fade show active" id="ne-pane" role="tabpanel">
-            <div class="mb-3">
-                <label>Title (नेपाली)</label>
-                <input type="text" name="title[ne]" class="form-control"
-                       value="{{ old('title.ne', $news->getTranslation('title', 'ne')) }}">
-                @error('title.ne') <small class="text-danger">{{ $message }}</small> @enderror
-            </div>
-            <div class="mb-3">
-                <label>Excerpt (नेपाली)</label>
-                <textarea name="excerpt[ne]" class="form-control" rows="2">{{ old('excerpt.ne', $news->getTranslation('excerpt', 'ne')) }}</textarea>
-            </div>
-            <div class="mb-3">
-                <label>Body (नेपाली)</label>
-                <textarea name="body[ne]" class="form-control" rows="8">{{ old('body.ne', $news->getTranslation('body', 'ne')) }}</textarea>
-                @error('body.ne') <small class="text-danger">{{ $message }}</small> @enderror
-            </div>
-        </div>
-
-        {{-- English pane --}}
-        <div class="tab-pane fade" id="en-pane" role="tabpanel">
-            <div class="mb-3">
-                <label>Title (English)</label>
-                <input type="text" name="title[en]" class="form-control"
-                       value="{{ old('title.en', $news->getTranslation('title', 'en')) }}">
-            </div>
-            <div class="mb-3">
-                <label>Excerpt (English)</label>
-                <textarea name="excerpt[en]" class="form-control" rows="2">{{ old('excerpt.en', $news->getTranslation('excerpt', 'en')) }}</textarea>
-            </div>
-            <div class="mb-3">
-                <label>Body (English)</label>
-                <textarea name="body[en]" class="form-control" rows="8">{{ old('body.en', $news->getTranslation('body', 'en')) }}</textarea>
-            </div>
-            <small class="text-muted">English खाली छोड्नुभयो भने, English site मा नेपाली content नै देखिनेछ (fallback)।</small>
-        </div>
+    <div class="mb-3">
+        <label>Title</label>
+        <input type="text" name="title" class="form-control" value="{{ old('title', $news->title) }}" required>
+        @error('title') <small class="text-danger">{{ $message }}</small> @enderror
     </div>
-    {{-- ===== End language tabs ===== --}}
+
+    <div class="mb-3">
+        <label>Excerpt</label>
+        <textarea name="excerpt" class="form-control" rows="2">{{ old('excerpt', $news->excerpt) }}</textarea>
+    </div>
+
+    <div class="mb-3">
+        <label>Body</label>
+        <textarea name="body" class="form-control" rows="8" required>{{ old('body', $news->body) }}</textarea>
+        @error('body') <small class="text-danger">{{ $message }}</small> @enderror
+    </div>
 
     @if($news->image)
         <div class="mb-2">
@@ -98,21 +68,4 @@
 
     <button class="btn btn-primary">Update</button>
 </form>
-</div>
-
-@if($errors->has('title.ne') || $errors->has('body.ne'))
-<script>
-    // Neither language had enough content — surface the Nepali tab
-    // first since it's the primary/default one, so errors are visible.
-    document.addEventListener('DOMContentLoaded', function () {
-        new bootstrap.Tab(document.getElementById('ne-tab')).show();
-    });
-</script>
-@elseif($errors->has('title.en') || $errors->has('body.en'))
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        new bootstrap.Tab(document.getElementById('en-tab')).show();
-    });
-</script>
-@endif
 @endsection

@@ -1,6 +1,6 @@
 @extends('frontend.layouts.app')
 
-@section('title', $categoryName ?? 'गृहपृष्ठ')
+@section('title', $categoryName ?? __('site.home'))
 
 @section('content')
 
@@ -42,7 +42,7 @@
 
 <div class="row">
     <div class="col-lg-8">
-        <h4 class="section-title">{{ $categoryName ?? 'ताजा समाचार' }}</h4>
+        <h4 class="section-title">{{ $categoryName ?? __('site.latest_news') }}</h4>
 
         <div class="news-list">
             @php $listNews = $news->skip(4); @endphp
@@ -66,7 +66,7 @@
                 </div>
             @empty
                 @if($news->count() <= 4)
-                    <p>यस श्रेणीमा हाल थप कुनै समाचार छैन।</p>
+                    <p>{{ __('site.no_more_news') }}</p>
                 @endif
             @endforelse
         </div>
@@ -78,27 +78,27 @@
 
     <div class="col-lg-4">
         <div class="sidebar-box mb-4">
-            <h5 class="sidebar-title"><i class="bi bi-fire text-danger"></i> बढी पढिएका</h5>
+            <h5 class="sidebar-title"><i class="bi bi-fire text-danger"></i> {{ __('site.trending') }}</h5>
             <ul class="trending-list">
                 @forelse($trending as $index => $t)
                     <li>
                         <span class="trending-number">{{ $index + 1 }}</span>
                         <div>
                             <a href="{{ route('news.show', $t->slug) }}" class="trending-title">{{ $t->title }}</a>
-                            <div class="news-meta"><i class="bi bi-eye"></i> {{ $t->views }} पटक</div>
+                            <div class="news-meta"><i class="bi bi-eye"></i> {{ $t->views }} {{ __('site.times_suffix') }}</div>
                         </div>
                     </li>
                 @empty
-                    <li>अहिलेसम्म डाटा छैन।</li>
+                    <li>{{ __('site.no_data') }}</li>
                 @endforelse
             </ul>
         </div>
 
         <div class="sidebar-ad-box">
-            <span class="ad-label">विज्ञापन</span>
+            <span class="ad-label">{{ __('site.ad_space') }}</span>
             <div class="ad-placeholder">
                 <i class="bi bi-image"></i>
-                <p>Advertisement Space</p>
+                <p>{{ __('site.ad_placeholder') }}</p>
             </div>
         </div>
     </div>

@@ -3,17 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Translatable\HasTranslations;
 
 class News extends Model
 {
-    use HasTranslations;
-
-    public array $translatable = ['title', 'excerpt', 'body'];
-
     protected $fillable = [
-        'category_id', 'user_id', 'title', 'slug', 'excerpt',
-        'body', 'image', 'is_published', 'published_at',
+        'category_id', 'user_id', 'locale', 'title', 'slug', 'excerpt',
+        'body', 'image', 'is_published', 'published_at', 'views',
     ];
 
     protected $casts = [

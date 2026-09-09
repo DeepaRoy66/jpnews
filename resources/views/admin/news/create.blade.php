@@ -1,77 +1,55 @@
 @extends('admin.layouts.app')
 
 @section('content')
-<h4>Add News</h4>
+<h4>Create News</h4>
 
-<div class="admin-card">
 <form action="{{ route('admin.news.store') }}" method="POST" enctype="multipart/form-data">
     @csrf
 
     <div class="mb-3">
+        <label>भाषा / Language</label>
+        <div>
+            <label class="me-3"><input type="radio" name="locale" id="localeNe" value="ne" {{ old('locale', 'ne') == 'ne' ? 'checked' : '' }}> नेपाली</label>
+            <label><input type="radio" name="locale" id="localeEn" value="en" {{ old('locale') == 'en' ? 'checked' : '' }}> English</label>
+        </div>
+        @error('locale') <small class="text-danger">{{ $message }}</small> @enderror
+    </div>
+
+    <div class="mb-3">
         <label>Category</label>
-        <select name="category_id" class="form-control" required>
-            <option value="">-- Select --</option>
+        <select name="category_id" id="categorySelect" class="form-control" required>
+            <option value="">-- Select Category --</option>
             @foreach($categories as $category)
-                <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                    {{ $category->name }}
+                <option value="{{ $category->id }}"
+                        data-ne="{{ $category->nameIn('ne') ? '1' : '0' }}"
+                        data-en="{{ $category->nameIn('en') ? '1' : '0' }}"
+                        data-name-ne="{{ $category->nameIn('ne') }}"
+                        data-name-en="{{ $category->nameIn('en') }}"
+                        {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                    {{ $category->nameIn('ne') ?? $category->nameIn('en') }} ({{ $category->slug }})
                 </option>
             @endforeach
         </select>
+        <small class="text-muted">छानिएको भाषा अनुसार, त्यही भाषामा नाम भएका category मात्र देखिन्छन्।</small>
         @error('category_id') <small class="text-danger">{{ $message }}</small> @enderror
     </div>
 
-    {{-- ===== Language tabs ===== --}}
-    <ul class="nav nav-tabs mb-3" id="langTab" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="ne-tab" data-bs-toggle="tab" data-bs-target="#ne-pane" type="button" role="tab">
-                नेपाली
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="en-tab" data-bs-toggle="tab" data-bs-target="#en-pane" type="button" role="tab">
-                English
-            </button>
-        </li>
-    </ul>
-    <p class="text-muted small mb-3">कम्तिमा एउटा भाषा (नेपाली वा English) मा title र body भर्नु अनिवार्य छ।</p>
-
-    <div class="tab-content mb-3">
-        {{-- Nepali pane --}}
-        <div class="tab-pane fade show active" id="ne-pane" role="tabpanel">
-            <div class="mb-3">
-                <label>Title (नेपाली)</label>
-                <input type="text" name="title[ne]" class="form-control" value="{{ old('title.ne') }}">
-                @error('title.ne') <small class="text-danger">{{ $message }}</small> @enderror
-            </div>
-            <div class="mb-3">
-                <label>Excerpt (नेपाली)</label>
-                <textarea name="excerpt[ne]" class="form-control" rows="2">{{ old('excerpt.ne') }}</textarea>
-            </div>
-            <div class="mb-3">
-                <label>Body (नेपाली)</label>
-                <textarea name="body[ne]" class="form-control" rows="8">{{ old('body.ne') }}</textarea>
-                @error('body.ne') <small class="text-danger">{{ $message }}</small> @enderror
-            </div>
-        </div>
-
-        {{-- English pane --}}
-        <div class="tab-pane fade" id="en-pane" role="tabpanel">
-            <div class="mb-3">
-                <label>Title (English)</label>
-                <input type="text" name="title[en]" class="form-control" value="{{ old('title.en') }}">
-            </div>
-            <div class="mb-3">
-                <label>Excerpt (English)</label>
-                <textarea name="excerpt[en]" class="form-control" rows="2">{{ old('excerpt.en') }}</textarea>
-            </div>
-            <div class="mb-3">
-                <label>Body (English)</label>
-                <textarea name="body[en]" class="form-control" rows="8">{{ old('body.en') }}</textarea>
-            </div>
-            <small class="text-muted">English खाली छोड्नुभयो भने, English site मा नेपाली content नै देखिनेछ (fallback)।</small>
-        </div>
+    <div class="mb-3">
+        <label>Title</label>
+        <input type="text" name="title" class="form-control" value="{{ old('title') }}" required>
+        @error('title') <small class="text-danger">{{ $message }}</small> @enderror
     </div>
-    {{-- ===== End language tabs ===== --}}
+
+    <div class="mb-3">
+        <label>Excerpt</label>
+        <textarea name="excerpt" class="form-control" rows="2">{{ old('excerpt') }}</textarea>
+    </div>
+
+    <div class="mb-3">
+        <label>Body</label>
+        <textarea name="body" class="form-control" rows="8" required>{{ old('body') }}</textarea>
+        @error('body') <small class="text-danger">{{ $message }}</small> @enderror
+    </div>
 
     <div class="mb-3">
         <label>Featured Image</label>
@@ -79,32 +57,58 @@
     </div>
 
     <div class="mb-3">
-        <label>Published At</label>
-        <input type="datetime-local" name="published_at" class="form-control" value="{{ old('published_at') }}">
+        <label>Published At (optional)</label>
+        <input type="datetime-local" name="published_at" class="form-control">
     </div>
 
     <div class="form-check mb-3">
-        <input type="checkbox" name="is_published" value="1" class="form-check-input" id="isPublished" {{ old('is_published') ? 'checked' : '' }}>
-        <label class="form-check-label" for="isPublished">Published</label>
+        <input type="checkbox" name="is_published" value="1" class="form-check-input" id="isPublished">
+        <label class="form-check-label" for="isPublished">Publish Now</label>
     </div>
 
-    <button class="btn btn-primary">Create</button>
+    <button class="btn btn-primary">Save</button>
 </form>
-</div>
 
-@if($errors->has('title.ne') || $errors->has('body.ne'))
 <script>
-    // Neither language had enough content — surface the Nepali tab
-    // first since it's the primary/default one, so errors are visible.
-    document.addEventListener('DOMContentLoaded', function () {
-        new bootstrap.Tab(document.getElementById('ne-tab')).show();
-    });
+    (function () {
+        const localeNe = document.getElementById('localeNe');
+        const localeEn = document.getElementById('localeEn');
+        const select = document.getElementById('categorySelect');
+        const options = Array.from(select.options);
+
+        function filterCategories() {
+            const locale = localeEn.checked ? 'en' : 'ne';
+            let firstVisibleSet = false;
+
+            options.forEach(function (opt) {
+                if (opt.value === '') {
+                    opt.hidden = false;
+                    return;
+                }
+
+                const available = opt.dataset[locale] === '1';
+                opt.hidden = !available;
+
+                if (available) {
+                    const label = locale === 'ne' ? opt.dataset.nameNe : opt.dataset.nameEn;
+                    opt.textContent = label;
+                }
+
+                if (available && opt.selected) {
+                    firstVisibleSet = true;
+                }
+            });
+
+            // If the currently selected category isn't available in the
+            // newly chosen language, reset the selection back to placeholder.
+            if (!firstVisibleSet && select.value !== '') {
+                select.value = '';
+            }
+        }
+
+        localeNe.addEventListener('change', filterCategories);
+        localeEn.addEventListener('change', filterCategories);
+        filterCategories();
+    })();
 </script>
-@elseif($errors->has('title.en') || $errors->has('body.en'))
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        new bootstrap.Tab(document.getElementById('en-tab')).show();
-    });
-</script>
-@endif
 @endsection

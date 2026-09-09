@@ -5,7 +5,7 @@
 @section('content')
 
 <nav class="breadcrumb-nav">
-    <a href="{{ route('home') }}">गृहपृष्ठ</a>
+    <a href="{{ route('home') }}">{{ __('site.home') }}</a>
     <i class="bi bi-chevron-right"></i>
     <a href="{{ route('category.show', $news->category->slug) }}">{{ $news->category->name }}</a>
 </nav>
@@ -25,7 +25,7 @@
                 </div>
             </div>
             <div class="article-views">
-                <i class="bi bi-eye"></i> {{ $news->views }} पटक हेरिएको
+                <i class="bi bi-eye"></i> {{ $news->views }} {{ __('site.times_viewed') }}
             </div>
         </div>
 
@@ -36,13 +36,13 @@
         </div>
 
         <div class="article-tags">
-            <span class="tag-label">ट्याग:</span>
+            <span class="tag-label">{{ __('site.tag_label') }}</span>
             <a href="{{ route('category.show', $news->category->slug) }}" class="tag">{{ $news->category->name }}</a>
-            <a href="#" class="tag">समाचार</a>
+            <a href="#" class="tag">{{ __('site.news_tag') }}</a>
         </div>
 
         <div class="share-bar">
-            <strong>यो समाचार सेयर गर्नुहोस्:</strong>
+            <strong>{{ __('site.share_this') }}</strong>
             <div class="share-icons">
                 <a href="#" class="share-btn fb"><i class="bi bi-facebook"></i></a>
                 <a href="#" class="share-btn tw"><i class="bi bi-twitter-x"></i></a>
@@ -54,7 +54,7 @@
 
     <div class="col-lg-4">
         <div class="sidebar-box mb-4">
-            <h5 class="sidebar-title">सम्बन्धित समाचार</h5>
+            <h5 class="sidebar-title">{{ __('site.related_news') }}</h5>
             @forelse($related as $item)
                 <div class="related-item">
                     <a href="{{ route('news.show', $item->slug) }}">
@@ -66,15 +66,15 @@
                     </div>
                 </div>
             @empty
-                <p class="news-meta">यस श्रेणीमा अन्य समाचार छैन।</p>
+                <p class="news-meta">{{ __('site.no_related_news') }}</p>
             @endforelse
         </div>
 
         <div class="sidebar-ad-box">
-            <span class="ad-label">विज्ञापन</span>
+            <span class="ad-label">{{ __('site.ad_space') }}</span>
             <div class="ad-placeholder">
                 <i class="bi bi-image"></i>
-                <p>Advertisement Space</p>
+                <p>{{ __('site.ad_placeholder') }}</p>
             </div>
         </div>
     </div>

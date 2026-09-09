@@ -19,6 +19,7 @@ class NewsController extends Controller
         $related = News::with('category')
             ->published()
             ->where('category_id', $news->category_id)
+            ->where('locale', $news->locale)
             ->where('id', '!=', $news->id)
             ->latest('published_at')
             ->take(4)

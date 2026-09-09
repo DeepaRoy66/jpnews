@@ -13,16 +13,18 @@
 <table class="table table-bordered">
     <thead>
         <tr>
-            <th>Name</th>
             <th>Slug</th>
+            <th>नेपाली नाम</th>
+            <th>English Name</th>
             <th>Action</th>
         </tr>
     </thead>
     <tbody>
-        @foreach($categories as $category)
+        @forelse($categories as $category)
         <tr>
-            <td>{{ $category->name }}</td>
-            <td>{{ $category->slug }}</td>
+            <td><code>{{ $category->slug }}</code></td>
+            <td>{{ $category->nameIn('ne') ?? '—' }}</td>
+            <td>{{ $category->nameIn('en') ?? '—' }}</td>
             <td>
                 <a href="{{ route('admin.categories.edit', $category) }}" class="btn btn-sm btn-warning">Edit</a>
                 <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this category?')">
@@ -31,7 +33,9 @@
                 </form>
             </td>
         </tr>
-        @endforeach
+        @empty
+        <tr><td colspan="4">कुनै category छैन।</td></tr>
+        @endforelse
     </tbody>
 </table>
 
