@@ -26,7 +26,6 @@
     <div class="mb-3">
         <label>Position</label>
         <select name="position" class="form-control" required>
-            <option value="navbar">Navbar</option>
             <option value="sidebar">Sidebar</option>
             <option value="footer">Footer</option>
             <option value="between_news">Between News</option>

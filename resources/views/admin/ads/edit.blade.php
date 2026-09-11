@@ -28,10 +28,13 @@
     <div class="mb-3">
         <label>Position</label>
         <select name="position" class="form-control" required>
-            @foreach(['navbar', 'sidebar', 'footer', 'between_news'] as $pos)
+            @foreach(['sidebar', 'footer', 'between_news'] as $pos)
                 <option value="{{ $pos }}" {{ $ad->position == $pos ? 'selected' : '' }}>{{ ucfirst(str_replace('_', ' ', $pos)) }}</option>
             @endforeach
         </select>
+        @if($ad->position === 'navbar')
+            <small class="text-danger">यो ad हाल "Navbar" position मा राखिएको छ, जुन अब frontend मा देखिँदैन। कृपया माथिबाट अर्को position छान्नुहोस्।</small>
+        @endif
     </div>
 
     <div class="row">

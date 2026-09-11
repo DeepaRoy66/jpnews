@@ -64,6 +64,15 @@
         .footer-bottom a:hover { color: #fff; }
         #backToTop { position: fixed; bottom: 24px; right: 24px; width: 46px; height: 46px; border-radius: 50%; background: #e30613; color: #fff; display: none; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 999; cursor: pointer; border: none; }
         #backToTop:hover { background: #b8040f; }
+        .footer-ad-strip { text-align: center; padding: 24px 0 0; margin-top: 8px; }
+        .footer-ad-label { display: block; font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; }
+        .footer-ad-banner {
+            display: inline-block; max-width: 728px; width: 100%;
+            border-radius: 8px; padding: 14px;
+            background: #fff; transition: box-shadow .2s ease;
+        }
+        .footer-ad-banner:hover { box-shadow: 0 0 0 2px #e30613; }
+        .footer-ad-banner img { max-height: 90px; max-width: 100%; border-radius: 4px; display: block; margin: 0 auto; }
     </style>
 </head>
 <body>
@@ -142,34 +151,13 @@
     </div>
 </nav>
 
-@if($navbarAd)
-<div class="text-center bg-light py-2">
-    <a href="{{ $navbarAd->link ?? '#' }}" target="_blank" rel="noopener">
-        <img src="{{ asset('storage/'.$navbarAd->image) }}" alt="{{ $navbarAd->title }}" style="max-height:90px;">
-    </a>
-</div>
-@endif
+{{-- Navbar ad removed per request --}}
 
 <div class="container my-4">
     @yield('content')
 </div>
 
-<div class="newsletter-strip">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-6 mb-3 mb-md-0">
-                <h5>{{ __('site.newsletter_title') }}</h5>
-                <p>{{ __('site.newsletter_sub') }}</p>
-            </div>
-            <div class="col-md-6">
-                <form class="d-flex newsletter-form" onsubmit="return false;">
-                    <input type="email" placeholder="{{ __('site.newsletter_placeholder') }}" required>
-                    <button type="submit">{{ __('site.subscribe') }}</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+{{-- Newsletter strip removed per request --}}
 
 <footer class="site-footer">
     <div class="container">
@@ -219,12 +207,22 @@
                 </div>
             </div>
         </div>
+
+        @if(isset($footerAd) && $footerAd)
+        <div class="footer-ad-strip">
+            <span class="footer-ad-label">{{ __('site.ad_space') }}</span>
+            <a href="{{ $footerAd->link ?? '#' }}" target="_blank" rel="noopener" class="footer-ad-banner">
+                <img src="{{ asset('storage/'.$footerAd->image) }}" alt="{{ $footerAd->title }}">
+            </a>
+        </div>
+        @endif
+
         <div class="footer-bottom d-flex flex-wrap justify-content-between align-items-center">
             <div>&copy; {{ date('Y') }} MeroNews. {{ __('site.rights_reserved') }}</div>
             <div>
                 <a href="#">{{ __('site.privacy_policy') }}</a>
                 <a href="#">{{ __('site.terms') }}</a>
-                <a href="#">Sitemap</a>
+                <a href="#">{{ __('site.sitemap') }}</a>
             </div>
         </div>
     </div>
