@@ -8,16 +8,6 @@ use App\Models\News;
 
 class HomeController extends Controller
 {
-    private array $categoryStyles = [
-        'rajniti'      => ['layout' => 'list',      'color' => '#1f3a5f', 'icon' => 'bi-bank'],
-        'arthatantra'  => ['layout' => 'stat',       'color' => '#1a7a4c', 'icon' => 'bi-graph-up-arrow'],
-        'khelkud'      => ['layout' => 'big-grid',   'color' => '#d95d1e', 'icon' => 'bi-trophy'],
-        'manoranjan'   => ['layout' => 'masonry',    'color' => '#8e2d8e', 'icon' => 'bi-film'],
-        'prabidhi'     => ['layout' => 'minimal',    'color' => '#0d7c86', 'icon' => 'bi-cpu'],
-        'bishwa'       => ['layout' => 'timeline',   'color' => '#2b2b2b', 'icon' => 'bi-globe-asia-australia'],
-        'swasthya'     => ['layout' => 'icon-card',  'color' => '#2e9e5b', 'icon' => 'bi-heart-pulse'],
-    ];
-
     public function index()
     {
         $locale = app()->getLocale();
@@ -35,10 +25,39 @@ class HomeController extends Controller
             ->take(5)
             ->get();
 
+        $categories = Category::with('translations')->get()->filter(function ($cat) use ($locale) {
+            return $cat->nameIn($locale) !== null;
+        });
+
+        $categorySections = [];
+        foreach ($categories as $cat) {
+            $catNews = News::with(['category', 'author'])
+                ->published()
+                ->where('locale', $locale)
+                ->where('category_id', $cat->id)
+                ->latest('published_at')
+                ->take(4)
+                ->get();
+
+            if ($catNews->isEmpty()) {
+                continue;
+            }
+
+            $categorySections[] = [
+                'category' => $cat,
+                'name' => $cat->nameIn($locale),
+                'slug' => $cat->slug,
+                'accent' => $cat->accent_color,
+                'icon' => $cat->icon,
+                'items' => $catNews,
+            ];
+        }
+
         return view('frontend.home', [
             'news' => $news,
             'trending' => $trending,
             'categoryName' => null,
+            'categorySections' => $categorySections,
         ]);
     }
 
@@ -61,16 +80,14 @@ class HomeController extends Controller
             ->take(5)
             ->get();
 
-        $style = $this->categoryStyles[$slug] ?? ['layout' => 'list', 'color' => '#e30613', 'icon' => 'bi-newspaper'];
-
         return view('frontend.category', [
             'news' => $news,
             'trending' => $trending,
             'categoryName' => $category->nameIn($locale) ?? $category->slug,
             'categorySlug' => $slug,
-            'layout' => $style['layout'],
-            'accent' => $style['color'],
-            'icon' => $style['icon'],
+            'layout' => $category->layout_type,
+            'accent' => $category->accent_color,
+            'icon' => $category->icon,
         ]);
     }
 }

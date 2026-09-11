@@ -17,7 +17,6 @@
 
         @switch($layout)
 
-            {{-- ===================== LIST LAYOUT (राजनीति) ===================== --}}
             @case('list')
                 <div class="list-layout">
                     @forelse($news as $item)
@@ -38,14 +37,12 @@
                 </div>
                 @break
 
-            {{-- ===================== STAT LAYOUT (अर्थतन्त्र) ===================== --}}
             @case('stat')
                 <div class="stat-layout">
                     @forelse($news as $item)
                         <div class="stat-card">
                             <div class="stat-card-img">
                                 <img src="{{ $item->image ? asset('storage/'.$item->image) : 'https://placehold.co/400x260?text=No+Image' }}" loading="lazy">
-                                <div class="stat-badge" style="background: {{ $accent }};"><i class="bi bi-eye"></i> {{ $item->views }}</div>
                             </div>
                             <div class="stat-card-body">
                                 <h5><a href="{{ route('news.show', $item->slug) }}">{{ $item->title }}</a></h5>
@@ -59,7 +56,6 @@
                 </div>
                 @break
 
-            {{-- ===================== BIG-GRID LAYOUT (खेलकुद) ===================== --}}
             @case('big-grid')
                 <div class="biggrid-layout">
                     @forelse($news as $index => $item)
@@ -71,7 +67,7 @@
                                         <span class="biggrid-hero-tag" style="background: {{ $accent }};"><i class="bi {{ $icon }}"></i> {{ __('site.latest_news') }}</span>
                                         <h3>{{ $item->title }}</h3>
                                         <p>{{ Str::limit($item->excerpt, 130) }}</p>
-                                        <div class="news-meta light">{{ $item->published_at?->diffForHumans() }} <span class="dot">•</span> {{ $item->views }} {{ __('site.times_suffix') }}</div>
+                                        <div class="news-meta light">{{ $item->published_at?->diffForHumans() }}</div>
                                     </div>
                                 </a>
                             </div>
@@ -84,7 +80,7 @@
                                     <img src="{{ $item->image ? asset('storage/'.$item->image) : 'https://placehold.co/500x320?text=No+Image' }}" loading="lazy">
                                     <div class="biggrid-overlay">
                                         <h5>{{ $item->title }}</h5>
-                                        <div class="news-meta light">{{ $item->published_at?->diffForHumans() }} <span class="dot">•</span> {{ $item->views }} {{ __('site.times_suffix') }}</div>
+                                        <div class="news-meta light">{{ $item->published_at?->diffForHumans() }}</div>
                                     </div>
                                 </a>
                             </div>
@@ -99,7 +95,6 @@
                 </div>
                 @break
 
-            {{-- ===================== MASONRY LAYOUT (मनोरञ्जन) ===================== --}}
             @case('masonry')
                 <div class="masonry-layout">
                     @forelse($news as $index => $item)
@@ -115,7 +110,6 @@
                 </div>
                 @break
 
-            {{-- ===================== MINIMAL LAYOUT (प्रविधि) — image-based ===================== --}}
             @case('minimal')
                 <div class="minimal-layout">
                     @forelse($news as $item)
@@ -136,7 +130,6 @@
                 </div>
                 @break
 
-            {{-- ===================== TIMELINE LAYOUT (विश्व) ===================== --}}
             @case('timeline')
                 <div class="timeline-layout">
                     @forelse($news as $item)
@@ -154,7 +147,6 @@
                 </div>
                 @break
 
-            {{-- ===================== ICON-CARD LAYOUT (स्वास्थ्य) ===================== --}}
             @case('icon-card')
                 <div class="iconcard-layout">
                     @forelse($news as $item)
@@ -193,7 +185,6 @@
                         <span class="trending-number" style="color: {{ $accent }};">{{ $index + 1 }}</span>
                         <div>
                             <a href="{{ route('news.show', $t->slug) }}" class="trending-title">{{ $t->title }}</a>
-                            <div class="news-meta"><i class="bi bi-eye"></i> {{ $t->views }} {{ __('site.times_suffix') }}</div>
                         </div>
                     </li>
                 @empty
@@ -232,18 +223,15 @@
     .news-meta.light { color: rgba(255,255,255,0.85); }
     .news-meta .dot { opacity: .5; }
 
-    /* ===== Category banner ===== */
     .cat-banner { border-radius: 12px; padding: 28px 32px; color: #fff; display: flex; align-items: center; gap: 18px; box-shadow: var(--shadow-md); }
     .cat-banner-icon { width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .cat-banner-icon i { font-size: 28px; }
     .cat-banner h2 { font-weight: 800; margin: 0; font-size: 28px; letter-spacing: -0.3px; }
     .cat-banner-sub { font-size: 13px; opacity: .85; }
 
-    /* ===== Empty state ===== */
     .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
     .empty-state i { font-size: 34px; opacity: .4; margin-bottom: 8px; display: block; }
 
-    /* ===== Sidebar (shared) ===== */
     .sidebar-box { background: #fff; border: 1px solid var(--border-soft); border-radius: var(--card-radius); padding: 20px; box-shadow: var(--shadow-sm); }
     .sidebar-title { font-weight: 800; font-size: 16px; margin-bottom: 16px; border-bottom: 3px solid; padding-bottom: 10px; display: inline-flex; align-items: center; gap: 8px; }
     .trending-list { list-style: none; padding: 0; margin: 0; }
@@ -260,7 +248,6 @@
     .ad-placeholder i { font-size: 32px; }
     .ad-placeholder p { font-size: 13px; margin-top: 8px; }
 
-    /* ===== LIST layout (राजनीति) ===== */
     .list-layout { display: flex; flex-direction: column; gap: 12px; }
     .list-row { display: flex; align-items: center; gap: 16px; background: #fff; border-radius: var(--card-radius); padding: 14px; box-shadow: var(--shadow-sm); transition: var(--transition); }
     .list-row:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
@@ -272,21 +259,18 @@
     .list-row-body h5 a:hover { color: #e30613; }
     .list-row-body p { font-size: 15px; color: var(--text-muted); margin-bottom: 6px; line-height: 1.5; }
 
-    /* ===== STAT layout (अर्थतन्त्र) ===== */
     .stat-layout { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
     .stat-card { background: #fff; border-radius: var(--card-radius); overflow: hidden; box-shadow: var(--shadow-sm); transition: var(--transition); }
     .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
     .stat-card-img { position: relative; overflow: hidden; }
     .stat-card-img img { width: 100%; height: 210px; object-fit: cover; transition: transform .35s; }
     .stat-card:hover .stat-card-img img { transform: scale(1.05); }
-    .stat-badge { position: absolute; top: 10px; right: 10px; color: #fff; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 20px; backdrop-filter: blur(4px); }
     .stat-card-body { padding: 16px; }
     .stat-card-body h5 { font-size: 18px; font-weight: 700; margin-bottom: 8px; line-height: 1.4; }
     .stat-card-body h5 a { color: var(--text-dark); transition: var(--transition); }
     .stat-card-body h5 a:hover { color: #e30613; }
     .stat-card-body p { font-size: 15px; color: var(--text-muted); line-height: 1.5; }
 
-    /* ===== BIG-GRID layout (खेलकुद) ===== */
     .biggrid-hero { position: relative; border-radius: 12px; overflow: hidden; height: 420px; margin-bottom: 20px; box-shadow: var(--shadow-md); }
     .biggrid-hero img { width: 100%; height: 100%; object-fit: cover; transition: transform .45s; }
     .biggrid-hero:hover img { transform: scale(1.04); }
@@ -302,7 +286,6 @@
     .biggrid-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.88)); padding: 14px; }
     .biggrid-overlay h5 { color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 4px; line-height: 1.35; }
 
-    /* ===== MASONRY layout (मनोरञ्जन) ===== */
     .masonry-layout { column-count: 2; column-gap: 16px; }
     .masonry-card { break-inside: avoid; margin-bottom: 16px; position: relative; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-sm); transition: var(--transition); }
     .masonry-card:hover { box-shadow: var(--shadow-md); }
@@ -311,7 +294,6 @@
     .masonry-card.tall img { height: 360px; }
     .masonry-caption { color: #fff; font-size: 16px; font-weight: 700; padding: 14px 14px 12px; line-height: 1.4; }
 
-    /* ===== MINIMAL layout (प्रविधि) — image-based ===== */
     .minimal-layout { display: flex; flex-direction: column; gap: 4px; }
     .minimal-card { display: flex; gap: 18px; align-items: flex-start; padding: 18px 0; border-bottom: 1px solid var(--border-soft); transition: var(--transition); }
     .minimal-card:last-child { border-bottom: none; }
@@ -325,7 +307,6 @@
     .minimal-body h5 a:hover { color: #e30613; }
     .minimal-body p { font-size: 15px; color: var(--text-muted); line-height: 1.55; }
 
-    /* ===== TIMELINE layout (विश्व) ===== */
     .timeline-layout { position: relative; padding-left: 32px; border-left: 2px solid var(--border-soft); }
     .timeline-item { position: relative; margin-bottom: 30px; }
     .timeline-item:last-child { margin-bottom: 0; }
@@ -336,12 +317,11 @@
     .timeline-content h5 a:hover { color: #e30613; }
     .timeline-content p { font-size: 15px; color: var(--text-muted); line-height: 1.55; }
 
-    /* ===== ICON-CARD layout (स्वास्थ्य) ===== */
     .iconcard-layout { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
     .iconcard { background: #fff; border-radius: 12px; overflow: hidden; position: relative; box-shadow: var(--shadow-sm); transition: var(--transition); }
     .iconcard:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
     .iconcard-top { position: absolute; top: 12px; left: 12px; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; z-index: 2; box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
-    .iconcard-img { overflow: hidden; }
+    .iconcard-img { overflow: hidden; position: relative; }
     .iconcard-img img { width: 100%; height: 200px; object-fit: cover; transition: transform .35s; }
     .iconcard:hover .iconcard-img img { transform: scale(1.06); }
     .iconcard-body { padding: 16px; }

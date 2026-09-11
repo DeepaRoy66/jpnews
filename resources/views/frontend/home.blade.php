@@ -40,6 +40,36 @@
     </div>
 @endif
 
+@foreach($categorySections as $section)
+    <div class="cat-section mb-4">
+        <div class="cat-section-header" style="background: {{ $section['accent'] }};">
+            <span><i class="bi {{ $section['icon'] }}"></i> {{ $section['name'] }}</span>
+            <a href="{{ route('category.show', $section['slug']) }}">{{ __('site.see_more') }} <i class="bi bi-chevron-right"></i></a>
+        </div>
+
+        <div class="cat-section-body">
+            <div class="cat-section-featured">
+                @php $catFirst = $section['items']->first(); @endphp
+                <a href="{{ route('news.show', $catFirst->slug) }}">
+                    <img src="{{ $catFirst->image ? asset('storage/'.$catFirst->image) : 'https://placehold.co/500x400?text=No+Image' }}">
+                </a>
+                <h5><a href="{{ route('news.show', $catFirst->slug) }}">{{ $catFirst->title }}</a></h5>
+            </div>
+
+            <div class="cat-section-list">
+                @foreach($section['items']->skip(1) as $item)
+                    <div class="cat-section-item">
+                        <a href="{{ route('news.show', $item->slug) }}">
+                            <img src="{{ $item->image ? asset('storage/'.$item->image) : 'https://placehold.co/150x100?text=No+Image' }}">
+                        </a>
+                        <h6><a href="{{ route('news.show', $item->slug) }}">{{ Str::limit($item->title, 70) }}</a></h6>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+@endforeach
+
 <div class="row">
     <div class="col-lg-8">
         <h4 class="section-title">{{ $categoryName ?? __('site.latest_news') }}</h4>
@@ -59,8 +89,6 @@
                             <i class="bi bi-person"></i> {{ $item->author->name ?? 'MeroNews' }}
                             &nbsp;.&nbsp;
                             <i class="bi bi-clock"></i> {{ $item->published_at?->diffForHumans() }}
-                            &nbsp;.&nbsp;
-                            <i class="bi bi-eye"></i> {{ $item->views }}
                         </div>
                     </div>
                 </div>
@@ -85,7 +113,6 @@
                         <span class="trending-number">{{ $index + 1 }}</span>
                         <div>
                             <a href="{{ route('news.show', $t->slug) }}" class="trending-title">{{ $t->title }}</a>
-                            <div class="news-meta"><i class="bi bi-eye"></i> {{ $t->views }} {{ __('site.times_suffix') }}</div>
                         </div>
                     </li>
                 @empty
@@ -114,7 +141,6 @@
     .news-meta.light { color: #eee; }
     .section-title { font-weight: 800; border-bottom: 3px solid #e30613; display: inline-block; padding-bottom: 6px; margin-bottom: 20px; }
 
-    /* Hero grid */
     .hero-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; }
     .hero-main { position: relative; border-radius: 8px; overflow: hidden; height: 460px; }
     .hero-main-img { width: 100%; height: 100%; object-fit: cover; }
@@ -135,7 +161,29 @@
     .hero-side-item h6 a { color: #111; }
     .hero-side-item h6 a:hover { color: #e30613; }
 
-    /* News list rows */
+    .cat-section { background: #fff; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+    .cat-section-header {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 20px; color: #fff;
+    }
+    .cat-section-header span { font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+    .cat-section-header a { color: #fff; font-size: 13px; opacity: 0.9; font-weight: 600; }
+    .cat-section-header a:hover { opacity: 1; text-decoration: underline; }
+
+    .cat-section-body { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
+    .cat-section-featured img { width: 100%; height: 300px; object-fit: cover; border-radius: 6px; margin-bottom: 10px; }
+    .cat-section-featured h5 { font-size: 18px; font-weight: 700; line-height: 1.4; }
+    .cat-section-featured h5 a { color: #111; }
+    .cat-section-featured h5 a:hover { color: #e30613; }
+
+    .cat-section-list { display: flex; flex-direction: column; }
+    .cat-section-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+    .cat-section-item:last-child { border-bottom: none; }
+    .cat-section-item img { width: 90px; height: 65px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+    .cat-section-item h6 { font-size: 14px; font-weight: 600; line-height: 1.4; margin: 0; }
+    .cat-section-item h6 a { color: #222; }
+    .cat-section-item h6 a:hover { color: #e30613; }
+
     .news-list { display: flex; flex-direction: column; gap: 18px; }
     .news-row { display: flex; gap: 16px; border-bottom: 1px solid #eee; padding-bottom: 18px; }
     .news-row-img img { width: 220px; height: 150px; object-fit: cover; border-radius: 6px; }
@@ -144,7 +192,6 @@
     .news-row-body h5 a:hover { color: #e30613; }
     .news-row-body p { font-size: 14px; color: #666; margin-bottom: 8px; }
 
-    /* Sidebar */
     .sidebar-box { background: #fafafa; border: 1px solid #eee; border-radius: 6px; padding: 18px; }
     .sidebar-title { font-weight: 800; margin-bottom: 16px; }
     .trending-list { list-style: none; padding: 0; margin: 0; }
@@ -165,6 +212,7 @@
         .hero-main { height: 300px; }
         .news-row { flex-direction: column; }
         .news-row-img img { width: 100%; height: 200px; }
+        .cat-section-body { grid-template-columns: 1fr; }
     }
 </style>
 @endpush
