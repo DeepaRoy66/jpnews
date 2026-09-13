@@ -10,7 +10,7 @@
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 
-<table class="table table-bordered">
+<table class="table table-bordered align-middle">
     <thead>
         <tr>
             <th>Slug</th>
@@ -21,10 +21,26 @@
     </thead>
     <tbody>
         @forelse($categories as $category)
+        @php
+            $hasNe = (bool) $category->nameIn('ne');
+            $hasEn = (bool) $category->nameIn('en');
+        @endphp
         <tr>
             <td><code>{{ $category->slug }}</code></td>
-            <td>{{ $category->nameIn('ne') ?? '—' }}</td>
-            <td>{{ $category->nameIn('en') ?? '—' }}</td>
+            <td>
+                @if($hasNe)
+                    {{ $category->nameIn('ne') }}
+                @else
+                    <span class="badge bg-light text-muted border">English only</span>
+                @endif
+            </td>
+            <td>
+                @if($hasEn)
+                    {{ $category->nameIn('en') }}
+                @else
+                    <span class="badge bg-light text-muted border">Nepali only</span>
+                @endif
+            </td>
             <td>
                 <a href="{{ route('admin.categories.edit', $category) }}" class="btn btn-sm btn-warning">Edit</a>
                 <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this category?')">

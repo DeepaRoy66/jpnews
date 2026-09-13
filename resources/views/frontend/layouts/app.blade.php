@@ -43,36 +43,82 @@
         .newsletter-form input { border: none; border-radius: 4px 0 0 4px; padding: 10px 14px; width: 100%; outline: none; }
         .newsletter-form button { background: #111; color: #fff; border: none; border-radius: 0 4px 4px 0; padding: 10px 20px; font-weight: 700; white-space: nowrap; }
         .newsletter-form button:hover { background: #000; }
-        .site-footer { background: #111; color: #b5b5b5; padding: 45px 0 0; }
-        .site-footer h5 { color: #fff; font-weight: 700; margin-bottom: 20px; font-size: 16px; position: relative; padding-bottom: 10px; }
+        .site-footer { background: #f4f4f4; color: #444; padding: 50px 0 0; }
+        .site-footer h5 { color: #1a1a1a; font-weight: 700; margin-bottom: 20px; font-size: 16px; position: relative; padding-bottom: 10px; }
         .site-footer h5::after { content: ''; position: absolute; left: 0; bottom: 0; width: 34px; height: 3px; background: #e30613; }
-        .site-footer a { color: #b5b5b5; }
-        .site-footer a:hover { color: #fff; }
+        .site-footer a { color: #555; }
+        .site-footer a:hover { color: #e30613; }
         .footer-links { list-style: none; padding: 0; margin: 0; }
         .footer-links li { margin-bottom: 11px; font-size: 14px; }
         .footer-links li i { color: #e30613; margin-right: 6px; font-size: 13px; }
-        .footer-social a { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; background: #1e1e1e; border-radius: 50%; margin-right: 8px; font-size: 16px; transition: .2s; }
-        .footer-social a:hover { background: #e30613; color: #fff; transform: translateY(-2px); }
-        .footer-about p { font-size: 14px; color: #999; line-height: 1.8; }
-        .footer-contact li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; margin-bottom: 12px; }
+        .footer-social a { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; background: #fff; border: 1px solid #e2e2e2; border-radius: 50%; margin-right: 8px; font-size: 16px; transition: .2s; color: #555; }
+        .footer-social a:hover { background: #e30613; border-color: #e30613; color: #fff; transform: translateY(-2px); }
+        .footer-social--bottom a {
+            width: 32px; height: 32px; font-size: 14px;
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+            color: #fff; margin-right: 6px;
+        }
+        .footer-social--bottom a:hover { background: #fff; color: #e30613; border-color: #fff; transform: translateY(-2px); }
+        .footer-about p { font-size: 14px; color: #666; line-height: 1.8; }
+        .footer-contact li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; margin-bottom: 12px; color: #444; }
         .footer-contact i { color: #e30613; margin-top: 3px; }
-        .app-badges a { display: inline-flex; align-items: center; gap: 8px; background: #1e1e1e; border: 1px solid #333; border-radius: 6px; padding: 8px 14px; margin-right: 10px; margin-bottom: 10px; font-size: 13px; }
-        .app-badges a:hover { border-color: #e30613; }
-        .app-badges i { font-size: 20px; }
-        .footer-bottom { border-top: 1px solid #262626; margin-top: 35px; padding: 18px 0; font-size: 13px; color: #777; }
-        .footer-bottom a { color: #999; margin-left: 16px; }
-        .footer-bottom a:hover { color: #fff; }
+        .footer-bottom-bar { background: linear-gradient(90deg, #e30613, #b8040f); margin-top: 40px; padding: 20px 0; }
+        .footer-bottom { font-size: 13px; color: #fff; }
+        .footer-bottom a { color: #fff; margin-left: 16px; opacity: 0.85; }
+        .footer-bottom a:hover { opacity: 1; text-decoration: underline; }
         #backToTop { position: fixed; bottom: 24px; right: 24px; width: 46px; height: 46px; border-radius: 50%; background: #e30613; color: #fff; display: none; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 999; cursor: pointer; border: none; }
         #backToTop:hover { background: #b8040f; }
-        .footer-ad-strip { text-align: center; padding: 24px 0 0; margin-top: 8px; }
-        .footer-ad-label { display: block; font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; }
-        .footer-ad-banner {
-            display: inline-block; max-width: 728px; width: 100%;
-            border-radius: 8px; padding: 14px;
-            background: #fff; transition: box-shadow .2s ease;
+
+        /* Footer ad strip — auto-scrolling marquee (carousel/dots removed) */
+        .footer-ad-strip { text-align: center; padding: 22px 0 8px; margin-top: 0; }
+        .footer-ad-strip--inline { text-align: left; padding: 0; margin-top: 0; margin-left: 0; }
+        .footer-ad-strip--inline .footer-ad-label { margin-bottom: 10px; }
+        .footer-ad-label {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 10.5px; color: #999; text-transform: uppercase;
+            letter-spacing: 1.4px; margin-bottom: 16px; font-weight: 700;
         }
-        .footer-ad-banner:hover { box-shadow: 0 0 0 2px #e30613; }
-        .footer-ad-banner img { max-height: 90px; max-width: 100%; border-radius: 4px; display: block; margin: 0 auto; }
+
+        .footer-ad-scroll {
+            max-width: 100%; width: 100%;
+            overflow: hidden;
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: 0 10px 26px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+            padding: 16px 0;
+        }
+        .footer-ad-scroll-track {
+            display: inline-flex;
+            align-items: center;
+            width: max-content;
+            animation: adScroll 22s linear infinite;
+        }
+        .footer-ad-scroll:hover .footer-ad-scroll-track { animation-play-state: paused; }
+        .footer-ad-scroll-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 220px;
+            height: 120px;
+            margin: 0 16px;
+            flex-shrink: 0;
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .footer-ad-scroll-item img {
+            max-width: 92%;
+            max-height: 85%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
+        @keyframes adScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
     </style>
 </head>
 <body>
@@ -167,30 +213,43 @@
                 <div class="footer-about">
                     <p>{{ __('site.about_text') }}</p>
                 </div>
-                <div class="footer-social mt-3">
-                    <a href="#"><i class="bi bi-facebook"></i></a>
-                    <a href="#"><i class="bi bi-instagram"></i></a>
-                    <a href="#"><i class="bi bi-youtube"></i></a>
-                    <a href="#"><i class="bi bi-twitter-x"></i></a>
-                    <a href="#"><i class="bi bi-tiktok"></i></a>
+
+                @if(isset($footerAds) && $footerAds->count() > 0)
+                <div class="footer-ad-strip footer-ad-strip--inline mt-2 ms-0">
+                    <div class="footer-ad-scroll">
+                        <div class="footer-ad-scroll-track">
+                            @foreach($footerAds as $ad)
+                                <a href="{{ $ad->link ?? '#' }}" target="_blank" rel="noopener" class="footer-ad-scroll-item">
+                                    <img src="{{ asset('storage/'.$ad->image) }}" alt="{{ $ad->title }}">
+                                </a>
+                            @endforeach
+                            {{-- duplicate set so the scroll loop looks seamless --}}
+                            @foreach($footerAds as $ad)
+                                <a href="{{ $ad->link ?? '#' }}" target="_blank" rel="noopener" class="footer-ad-scroll-item" aria-hidden="true">
+                                    <img src="{{ asset('storage/'.$ad->image) }}" alt="{{ $ad->title }}">
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
+                @endif
             </div>
             <div class="col-lg-2 col-md-6 mb-4">
                 <h5>{{ __('site.news_categories') }}</h5>
                 <ul class="footer-links">
                     @foreach($navCategories->take(5) as $cat)
-                        <li><i class="bi bi-chevron-right"></i><a href="{{ route('category.show', $cat->slug) }}">{{ $cat->name }}</a></li>
+                        <li><a href="{{ route('category.show', $cat->slug) }}">{{ $cat->name }}</a></li>
                     @endforeach
                 </ul>
             </div>
             <div class="col-lg-2 col-md-6 mb-4">
                 <h5>{{ __('site.quick_links') }}</h5>
                 <ul class="footer-links">
-                    <li><i class="bi bi-chevron-right"></i><a href="{{ route('home') }}">{{ __('site.home') }}</a></li>
-                    <li><i class="bi bi-chevron-right"></i><a href="#">{{ __('site.about_us') }}</a></li>
-                    <li><i class="bi bi-chevron-right"></i><a href="#">{{ __('site.advertise') }}</a></li>
-                    <li><i class="bi bi-chevron-right"></i><a href="#">{{ __('site.privacy_policy') }}</a></li>
-                    <li><i class="bi bi-chevron-right"></i><a href="#">{{ __('site.contact') }}</a></li>
+                    <li><a href="{{ route('home') }}">{{ __('site.home') }}</a></li>
+                    <li><a href="#">{{ __('site.about_us') }}</a></li>
+                    <li><a href="#">{{ __('site.advertise') }}</a></li>
+                    <li><a href="#">{{ __('site.privacy_policy') }}</a></li>
+                    <li><a href="#">{{ __('site.contact') }}</a></li>
                 </ul>
             </div>
             <div class="col-lg-4 col-md-6 mb-4">
@@ -200,25 +259,20 @@
                     <li><i class="bi bi-envelope-fill"></i> info@meronews.com</li>
                     <li><i class="bi bi-telephone-fill"></i> {{ __('site.phone') }}</li>
                 </ul>
-                <h5 class="mt-4">{{ __('site.download_app') }}</h5>
-                <div class="app-badges">
-                    <a href="#"><i class="bi bi-google-play"></i> Google Play</a>
-                    <a href="#"><i class="bi bi-apple"></i> App Store</a>
-                </div>
             </div>
         </div>
+    </div>
 
-        @if(isset($footerAd) && $footerAd)
-        <div class="footer-ad-strip">
-            <span class="footer-ad-label">{{ __('site.ad_space') }}</span>
-            <a href="{{ $footerAd->link ?? '#' }}" target="_blank" rel="noopener" class="footer-ad-banner">
-                <img src="{{ asset('storage/'.$footerAd->image) }}" alt="{{ $footerAd->title }}">
-            </a>
-        </div>
-        @endif
-
-        <div class="footer-bottom d-flex flex-wrap justify-content-between align-items-center">
+    <div class="footer-bottom-bar">
+        <div class="container footer-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>&copy; {{ date('Y') }} MeroNews. {{ __('site.rights_reserved') }}</div>
+            <div class="footer-social footer-social--bottom">
+                <a href="#"><i class="bi bi-facebook"></i></a>
+                <a href="#"><i class="bi bi-instagram"></i></a>
+                <a href="#"><i class="bi bi-youtube"></i></a>
+                <a href="#"><i class="bi bi-twitter-x"></i></a>
+                <a href="#"><i class="bi bi-tiktok"></i></a>
+            </div>
             <div>
                 <a href="#">{{ __('site.privacy_policy') }}</a>
                 <a href="#">{{ __('site.terms') }}</a>
@@ -230,6 +284,7 @@
 
 <button id="backToTop" title="Back to top"><i class="bi bi-arrow-up"></i></button>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     document.getElementById('themeToggle').addEventListener('click', function (e) {
         e.preventDefault();
