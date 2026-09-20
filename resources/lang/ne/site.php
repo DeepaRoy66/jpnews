@@ -40,4 +40,12 @@ return [
     'share_this' => 'यो समाचार सेयर गर्नुहोस्:',
     'related_news' => 'सम्बन्धित समाचार',
     'no_related_news' => 'यस श्रेणीमा अन्य समाचार छैन।',
+
+    // ---- added for the homepage feed (pagination, category suffix, relative time) ----
+    'news_suffix' => 'समाचार',
+    'load_more' => 'थप समाचार हेर्नुहोस्',
+    'showing_count' => ':total मध्ये :shown देखाइँदै',
+    'mins_ago' => ':n मिनेट अघि',
+    'hours_ago' => ':n घण्टा अघि',
+    'days_ago' => ':n दिन अघि',
 ];

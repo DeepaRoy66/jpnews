@@ -40,6 +40,9 @@ class CategoryController extends Controller
             'layout_type' => 'required|in:' . implode(',', array_keys($this->layoutOptions)),
             'accent_color' => 'required|regex:/^#[0-9A-Fa-f]{6}$/',
             'icon' => 'required|string|max:50',
+            'show_in_navbar_ne' => 'nullable|boolean',
+            'show_in_navbar_en' => 'nullable|boolean',
+            'nav_order' => 'nullable|integer|min:1|max:6',
         ]);
 
         $category = Category::create([
@@ -47,6 +50,9 @@ class CategoryController extends Controller
             'layout_type' => $data['layout_type'],
             'accent_color' => $data['accent_color'],
             'icon' => $data['icon'],
+            'show_in_navbar_ne' => $request->boolean('show_in_navbar_ne'),
+            'show_in_navbar_en' => $request->boolean('show_in_navbar_en'),
+            'nav_order' => $data['nav_order'] ?? null,
         ]);
 
         if (!empty($data['name_ne'])) {
@@ -73,12 +79,18 @@ class CategoryController extends Controller
             'layout_type' => 'required|in:' . implode(',', array_keys($this->layoutOptions)),
             'accent_color' => 'required|regex:/^#[0-9A-Fa-f]{6}$/',
             'icon' => 'required|string|max:50',
+            'show_in_navbar_ne' => 'nullable|boolean',
+            'show_in_navbar_en' => 'nullable|boolean',
+            'nav_order' => 'nullable|integer|min:1|max:6',
         ]);
 
         $category->update([
             'layout_type' => $data['layout_type'],
             'accent_color' => $data['accent_color'],
             'icon' => $data['icon'],
+            'show_in_navbar_ne' => $request->boolean('show_in_navbar_ne'),
+            'show_in_navbar_en' => $request->boolean('show_in_navbar_en'),
+            'nav_order' => $data['nav_order'] ?? null,
         ]);
 
         if (!empty($data['name_ne'])) {

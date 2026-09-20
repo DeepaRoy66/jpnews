@@ -40,4 +40,12 @@ return [
     'share_this' => 'Share this news:',
     'related_news' => 'Related News',
     'no_related_news' => 'No other news in this category.',
+
+    // ---- added for the homepage feed (pagination, category suffix, relative time) ----
+    'news_suffix' => 'News',
+    'load_more' => 'Load more news',
+    'showing_count' => 'Showing :shown of :total',
+    'mins_ago' => ':n minutes ago',
+    'hours_ago' => ':n hours ago',
+    'days_ago' => ':n days ago',
 ];

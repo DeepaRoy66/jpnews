@@ -53,6 +53,36 @@
         @error('icon') <small class="text-danger">{{ $message }}</small> @enderror
     </div>
 
+    <hr class="my-4">
+    <p class="text-muted small">Navbar मा कुन भाषामा देखाउने भनेर छुट्टाछुट्टै छान्नुहोस् (बढीमा ६ वटा प्रत्येक भाषामा).</p>
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="form-check form-switch">
+                <input type="checkbox" class="form-check-input" id="show_in_navbar_ne" name="show_in_navbar_ne" value="1"
+                       {{ old('show_in_navbar_ne', $category->show_in_navbar_ne) ? 'checked' : '' }}>
+                <label class="form-check-label fw-bold" for="show_in_navbar_ne">नेपाली Navbar मा देखाउने?</label>
+            </div>
+            @error('show_in_navbar_ne') <small class="text-danger d-block">{{ $message }}</small> @enderror
+        </div>
+        <div class="col-md-6">
+            <div class="form-check form-switch">
+                <input type="checkbox" class="form-check-input" id="show_in_navbar_en" name="show_in_navbar_en" value="1"
+                       {{ old('show_in_navbar_en', $category->show_in_navbar_en) ? 'checked' : '' }}>
+                <label class="form-check-label fw-bold" for="show_in_navbar_en">English Navbar मा देखाउने?</label>
+            </div>
+            @error('show_in_navbar_en') <small class="text-danger d-block">{{ $message }}</small> @enderror
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="fw-bold">Navbar Order (१ = सबैभन्दा पहिले)</label>
+        <input type="number" name="nav_order" class="form-control" min="1" max="6"
+               value="{{ old('nav_order', $category->nav_order) }}" placeholder="1 देखि 6 सम्म">
+        <small class="text-muted">यो order दुवै भाषाको navbar मा एउटै हुन्छ. कुनैमा टिक नगरे यो field ले काम गर्दैन.</small>
+        @error('nav_order') <small class="text-danger d-block">{{ $message }}</small> @enderror
+    </div>
+
     <button class="btn btn-primary">Update</button>
 </form>
 </div>

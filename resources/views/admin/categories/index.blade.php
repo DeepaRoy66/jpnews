@@ -16,6 +16,7 @@
             <th>Slug</th>
             <th>नेपाली नाम</th>
             <th>English Name</th>
+            <th>Navbar</th>
             <th>Action</th>
         </tr>
     </thead>
@@ -42,6 +43,13 @@
                 @endif
             </td>
             <td>
+                @if($category->show_in_navbar)
+                    <span class="badge bg-success">#{{ $category->nav_order ?? '-' }}</span>
+                @else
+                    <span class="badge bg-secondary">Off</span>
+                @endif
+            </td>
+            <td>
                 <a href="{{ route('admin.categories.edit', $category) }}" class="btn btn-sm btn-warning">Edit</a>
                 <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this category?')">
                     @csrf @method('DELETE')
@@ -50,7 +58,7 @@
             </td>
         </tr>
         @empty
-        <tr><td colspan="4">कुनै category छैन।</td></tr>
+        <tr><td colspan="5">कुनै category छैन।</td></tr>
         @endforelse
     </tbody>
 </table>
