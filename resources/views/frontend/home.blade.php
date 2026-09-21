@@ -7,44 +7,31 @@
 @php
     /*
         ---------------------------------------------------------------
-        LAYOUT VALUES — these MUST match App\Http\Controllers\Admin\
-        CategoryController::$layoutOptions exactly, or a category's
-        section silently falls back to 'list':
+        LAYOUT VALUES (must match Admin CategoryController::$layoutOptions)
             list | stat | big-grid | masonry | minimal | timeline | icon-card
+            split | carousel | headline        <- 3 naya
 
-        (Earlier this file checked for 'block-list' / 'grid' / 'text-list'
-        which are NOT valid database values — every category was silently
-        falling through to the same design regardless of what was picked
-        in the admin panel. Fixed by switching on the real values below.)
+        ASSUMED FIELDS (marked with a warning sign, adjust here only)
+          News:     title, excerpt, slug, image, published_at, views,
+                    category (relation), author (relation)
+          Category: nameIn($locale), slug, accent_color, icon, layout_type
+          Author:   name
 
-        ASSUMED MODEL FIELDS — adjust the ones marked ⚠️ in ONE place.
-          News:     title, excerpt ⚠️, slug, image ⚠️, published_at,
-                     views, category (relation), author (relation)
-          Category: nameIn($locale), slug, accent_color ⚠️, icon ⚠️,
-                     layout_type ⚠️, subcategories() ⚠️ relation
-          Author:    name ⚠️
+        ROUTES
+          news detail -> route('news.show', $item->slug)
+          category    -> route('category.show', $slug)
+          all news    -> route('news.latest')   (optional, button hides if missing)
 
-        ROUTE NAMES:
-          news detail  -> route('news.show', $item->slug)      ⚠️
-          category     -> route('category.show', $slug)        ⚠️
-
-        AD POLICY: one banner under the hero, page 1 only.
-
-        DUPLICATE-NEWS GUARD
-          $usedSlugs tracks hero / main feed / trending only. Category
-          sections deliberately do NOT filter against it — a category's
-          own section always shows that category's news, even if the
-          same item already appeared in the "Latest News" feed above
-          (see earlier discussion: with thin news volume per hidden
-          category, excluding already-shown items made whole sections
-          vanish).
+        PAGINATION: hataisakiyo. Controller le ->take(9)->get() ya
+        ->simplePaginate(9) dinu sakchha, duitai ma kaam garchha.
         ---------------------------------------------------------------
     */
     $locale = app()->getLocale();
 
-    $placeholder = asset('images/placeholder-news.jpg'); // ⚠️
+    $placeholder = asset('images/placeholder-news.jpg');
 
-    $defaultSectionLimit = 8; // ⚠️ set to 5 for a tighter homepage
+    $defaultSectionLimit = 9;   // har category section ma kati news
+    $minSectionItems     = 3;   // fresh news yo bhanda kam bhaye matra repeat le fill garcha
 
     $imgUrl = function ($item) use ($placeholder) {
         if (empty($item->image)) {
@@ -53,23 +40,33 @@
         if (str_starts_with($item->image, 'http')) {
             return $item->image;
         }
-        return asset('storage/' . $item->image); // ⚠️
+        return asset('storage/' . $item->image);
     };
 
     $catName = fn ($item) => $item->category?->nameIn($locale) ?? $item->category?->name ?? '';
 
-    $timeAgo = function ($item) use ($locale) {
-        $mins = $item->published_at ? $item->published_at->diffInMinutes(now()) : 0;
+    // minutes (integer). Carbon 3 ma diffInMinutes() float dincha, tesaile (int) + abs
+    $minsSince = fn ($item) => $item->published_at
+        ? (int) abs($item->published_at->diffInMinutes(now()))
+        : 0;
+
+    $timeAgo = function ($item) use ($minsSince) {
+        $mins = $minsSince($item);
         if ($mins < 60) return __('site.mins_ago', ['n' => $mins]);
         $h = intdiv($mins, 60);
         if ($h < 24) return __('site.hours_ago', ['n' => $h]);
         return __('site.days_ago', ['n' => intdiv($h, 24)]);
     };
 
-    $isFresh = fn ($item) => $item->published_at && $item->published_at->diffInMinutes(now()) < 15;
+    $isFresh = fn ($item) => $item->published_at && $minsSince($item) < 15;
 
-    $newsItems   = collect($news->items());
-    $onFirstPage = $news->currentPage() === 1;
+    $freshLabel = trans()->has('site.just_now')
+        ? __('site.just_now')
+        : __('site.mins_ago', ['n' => 0]);
+
+    // paginator ra plain collection duitai support garne
+    $newsItems   = method_exists($news, 'items') ? collect($news->items()) : collect($news);
+    $onFirstPage = !method_exists($news, 'currentPage') || $news->currentPage() === 1;
 
     $usedSlugs = collect();
 
@@ -90,16 +87,69 @@
 
     $usedSlugs = $usedSlugs->merge($gridItems->pluck('slug'));
 
-    $trendingFresh    = collect($trending ?? [])->reject(fn ($t) => $usedSlugs->contains($t->slug))->values();
-    $trendingSpotlight = $trendingFresh->take(6)->values();
-    $trendingSidebar   = $trendingFresh->slice(6)->values();
+    /* ---------- TRENDING ---------- */
+    $trendingAll   = collect($trending ?? []);
+    $trendingFresh = $trendingAll->reject(fn ($t) => $usedSlugs->contains($t->slug))->values();
 
-    if ($trendingSidebar->isEmpty()) {
-        $trendingSidebar = $trendingSpotlight;
+    if ($trendingFresh->count() >= 8) {
+        $trendingSpotlight = $trendingFresh->take(6)->values();
+        $trendingSidebar   = $trendingFresh->slice(6)->values();
+    } else {
+        // kam news bhayo: spotlight hatayera sidebar ma matra (duplicate nahune)
+        $trendingSpotlight = collect();
+        $trendingSidebar   = $trendingFresh->isNotEmpty() ? $trendingFresh : $trendingAll->take(6);
     }
 
     $usedSlugs = $usedSlugs->merge($trendingSpotlight->pluck('slug'))
                             ->merge($trendingSidebar->pluck('slug'));
+
+    /* ---------- CATEGORY SECTIONS (fresh pahila, repeat last ma) ---------- */
+    $preparedSections = collect();
+
+    if ($onFirstPage && !empty($categorySections)) {
+        foreach ($categorySections as $section) {
+            $secLimit = $section['limit'] ?? $defaultSectionLimit;
+
+            $pool  = collect($section['items'] ?? [])->unique('slug')->values();
+            $fresh = $pool->reject(fn ($i) => $usedSlugs->contains($i->slug))->values();
+
+            if ($fresh->count() >= $minSectionItems) {
+                $items = $fresh->take($secLimit)->values();
+            } else {
+                $backfill = $pool->reject(fn ($i) => $fresh->contains('slug', $i->slug))
+                                 ->take($minSectionItems - $fresh->count());
+                $items = $fresh->concat($backfill)->take($secLimit)->values();
+            }
+
+            if ($items->isEmpty()) {
+                continue;
+            }
+
+            $usedSlugs = $usedSlugs->merge($items->pluck('slug'));
+
+            $lead      = $items->first();
+            $subwidget = $section['subwidget'] ?? null;
+
+            $subItems = collect($subwidget['items'] ?? [])
+                ->reject(fn ($i) => $usedSlugs->contains($i->slug))
+                ->take(6)->values();
+            $usedSlugs = $usedSlugs->merge($subItems->pluck('slug'));
+
+            $leadCatSlug = $lead->category->slug ?? null;
+
+            $preparedSections->push([
+                'title'      => $section['title'] ?? null,
+                'items'      => $items,
+                'accent'     => $section['accent_color'] ?? ($lead->category->accent_color ?? null) ?? '#b81830',
+                'icon'       => $section['icon'] ?? ($lead->category->icon ?? null) ?? 'bi-grid-3x3-gap-fill',
+                'layout'     => $section['layout'] ?? ($lead->category->layout_type ?? null) ?? 'list',
+                'subcats'    => $section['subcats'] ?? [],
+                'subwidget'  => $subwidget,
+                'subItems'   => $subItems,
+                'viewAllUrl' => $section['view_all_url'] ?? ($leadCatSlug ? route('category.show', $leadCatSlug) : null),
+            ]);
+        }
+    }
 @endphp
 
 {{-- ================= HERO (page 1 only) ================= --}}
@@ -180,6 +230,7 @@
 <div class="row">
     <div class="col-lg-8">
 
+        {{-- ================= LATEST FEED ================= --}}
         <h4 class="section-title">{{ $categoryName ?? __('site.latest_news') }}</h4>
 
         <div class="news-feed">
@@ -195,7 +246,7 @@
                         @endif
                         <span class="meta-chip"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
                         @if (($isFresh)($item))
-                            <span class="meta-chip fresh"><i class="bi bi-lightning-fill"></i> {{ __('site.mins_ago', ['n' => 0]) }}</span>
+                            <span class="meta-chip fresh"><i class="bi bi-lightning-fill"></i> {{ $freshLabel }}</span>
                         @endif
                     </div>
                     @if (!empty($item->image))
@@ -213,269 +264,303 @@
             @endforelse
         </div>
 
-        <div class="mt-4">
-            {{ $news->links() }}
-        </div>
+        {{-- ================= CATEGORY SECTIONS (pagination ko thau ma) ================= --}}
+        @foreach ($preparedSections as $sec)
+            @php
+                $secItems   = $sec['items'];
+                $secLead    = $secItems->first();
+                $secRest    = $secItems->slice(1)->values();
+                $secAccent  = $sec['accent'];
+                $secIcon    = $sec['icon'];
+                $layout     = $sec['layout'];
+                $subcats    = $sec['subcats'];
+                $subwidget  = $sec['subwidget'];
+                $subItems   = $sec['subItems'];
+                $viewAllUrl = $sec['viewAllUrl'];
+            @endphp
 
-        {{--
-            ================= CATEGORY SECTIONS (page 1 only) =================
-            $layout is now one of the REAL admin values:
-            list | stat | big-grid | masonry | minimal | timeline | icon-card
-        --}}
-        @if ($onFirstPage && !empty($categorySections))
-            @foreach ($categorySections as $secIndex => $section)
-                @php
-                    $secLimit = $section['limit'] ?? $defaultSectionLimit;
-
-                    $secItems = collect($section['items'] ?? [])
-                        ->take($secLimit)
-                        ->values();
-
-                    $usedSlugs = $usedSlugs->merge($secItems->pluck('slug'));
-
-                    $secLead   = $secItems->first();
-                    $secRest   = $secItems->slice(1)->values();
-                    $secAccent = $section['accent_color'] ?? ($secLead->category->accent_color ?? null) ?? '#b81830'; // ⚠️
-                    $secIcon   = $section['icon'] ?? ($secLead->category->icon ?? null) ?? 'bi-grid-3x3-gap-fill'; // ⚠️
-
-                    $layout = $section['layout']
-                        ?? ($secLead->category->layout_type ?? null) // ⚠️
-                        ?? 'list';
-
-                    $subcats   = $section['subcats'] ?? [];
-                    $subwidget = $section['subwidget'] ?? null;
-
-                    $viewAllUrl = $section['view_all_url']
-                        ?? (($secLead->category->slug ?? null) ? route('category.show', $secLead->category->slug) : null); // ⚠️
-                @endphp
-
-                @if ($secItems->isEmpty())
-                    @continue
+            <div class="category-section" style="--cat-accent: {{ $secAccent }};">
+                @if (!empty($sec['title']))
+                    <div class="category-section-head">
+                        <span class="category-icon-badge"><i class="bi {{ $secIcon }}"></i></span>
+                        <h4 class="section-title cat-title">{{ $sec['title'] }}</h4>
+                    </div>
                 @endif
 
-                <div class="category-section" style="--cat-accent: {{ $secAccent }};">
-                    @if (!empty($section['title']))
-                        <div class="category-section-head">
-                            <span class="category-icon-badge"><i class="bi {{ $secIcon }}"></i></span>
-                            <h4 class="section-title cat-title">{{ $section['title'] }}</h4>
-                            @if ($viewAllUrl)
-                                <a href="{{ $viewAllUrl }}" class="view-all-link">{{ __('site.view_all') }} <i class="bi bi-chevron-right"></i></a>
-                            @endif
-                        </div>
-                    @endif
+                @if (!empty($subcats))
+                    <div class="cat-subnav">
+                        @foreach ($subcats as $sc)
+                            <a href="{{ $sc['url'] }}" class="cat-subnav-chip">{{ $sc['title'] }}</a>
+                        @endforeach
+                    </div>
+                @endif
 
-                    @if (!empty($subcats))
-                        <div class="cat-subnav">
-                            @foreach ($subcats as $sc)
-                                <a href="{{ $sc['url'] }}" class="cat-subnav-chip">{{ $sc['title'] }}</a>
-                            @endforeach
-                        </div>
-                    @endif
+                @switch($layout)
 
-                    @switch($layout)
-
-                        @case('list')
-                            {{-- numbered rows, image left, title+excerpt right --}}
-                            <div class="cat-list-layout">
-                                @foreach ($secItems as $item)
-                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-list-row">
-                                        <span class="cat-list-num">{{ $loop->iteration }}</span>
-                                        <span class="cat-list-img">
-                                            <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
-                                                 loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                                        </span>
-                                        <span class="cat-list-body">
-                                            <h5>{{ Str::limit($item->title, 75) }}</h5>
-                                            @if (!empty($item->excerpt))
-                                                <p>{{ Str::limit($item->excerpt, 100) }}</p>
-                                            @endif
-                                            <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
-                                        </span>
-                                    </a>
-                                @endforeach
-                            </div>
-                            @break
-
-                        @case('stat')
-                            {{-- 2-column photo cards --}}
-                            <div class="cat-stat-layout">
-                                @foreach ($secItems as $item)
-                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-stat-card">
-                                        <span class="cat-stat-img">
-                                            <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
-                                                 loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                                        </span>
-                                        <span class="cat-stat-body">
-                                            <h5>{{ Str::limit($item->title, 70) }}</h5>
-                                            @if (!empty($item->excerpt))
-                                                <p>{{ Str::limit($item->excerpt, 80) }}</p>
-                                            @endif
-                                            <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
-                                        </span>
-                                    </a>
-                                @endforeach
-                            </div>
-                            @break
-
-                        @case('big-grid')
-                            {{-- one big hero item + smaller tiles below --}}
-                            <div class="cat-biggrid-layout">
-                                @if ($secLead)
-                                    <a href="{{ route('news.show', $secLead->slug) }}" class="cat-biggrid-hero">
-                                        <img src="{{ ($imgUrl)($secLead) }}" alt="{{ $secLead->title }}"
-                                             loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                                        <span class="cat-biggrid-hero-overlay">
-                                            <span class="cat-biggrid-hero-tag" style="background: {{ $secAccent }};">
-                                                <i class="bi {{ $secIcon }}"></i> {{ __('site.latest_news') }}
-                                            </span>
-                                            <h3>{{ Str::limit($secLead->title, 90) }}</h3>
-                                            @if (!empty($secLead->excerpt))
-                                                <p>{{ Str::limit($secLead->excerpt, 130) }}</p>
-                                            @endif
-                                            <span class="news-meta light">{{ ($timeAgo)($secLead) }}</span>
-                                        </span>
-                                    </a>
-                                @endif
-                                @if ($secRest->isNotEmpty())
-                                    <div class="cat-biggrid-grid">
-                                        @foreach ($secRest as $item)
-                                            <a href="{{ route('news.show', $item->slug) }}" class="cat-biggrid-card">
-                                                <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
-                                                     loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                                                <span class="cat-biggrid-overlay">
-                                                    <h5>{{ Str::limit($item->title, 60) }}</h5>
-                                                    <span class="news-meta light">{{ ($timeAgo)($item) }}</span>
-                                                </span>
-                                            </a>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
-                            @break
-
-                        @case('masonry')
-                            {{-- pinterest-style columns, varying heights --}}
-                            <div class="cat-masonry-layout">
-                                @foreach ($secItems as $index => $item)
-                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-masonry-card {{ $index % 3 == 0 ? 'tall' : '' }}">
+                    @case('list')
+                        <div class="cat-list-layout">
+                            @foreach ($secItems as $item)
+                                <a href="{{ route('news.show', $item->slug) }}" class="cat-list-row">
+                                    <span class="cat-list-num">{{ $loop->iteration }}</span>
+                                    <span class="cat-list-img">
                                         <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
                                              loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                                        <span class="cat-masonry-caption" style="background: linear-gradient(transparent, {{ $secAccent }}f2);">
-                                            {{ Str::limit($item->title, 55) }}
-                                        </span>
-                                    </a>
-                                @endforeach
-                            </div>
-                            @break
+                                    </span>
+                                    <span class="cat-list-body">
+                                        <h5>{{ Str::limit($item->title, 75) }}</h5>
+                                        @if (!empty($item->excerpt))
+                                            <p>{{ Str::limit($item->excerpt, 100) }}</p>
+                                        @endif
+                                        <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                    </span>
+                                </a>
+                            @endforeach
+                        </div>
+                        @break
 
-                        @case('minimal')
-                            {{-- horizontal rows, small thumb + tagged icon --}}
-                            <div class="cat-minimal-layout">
-                                @foreach ($secItems as $item)
-                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-minimal-card">
-                                        <span class="cat-minimal-img">
-                                            <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
-                                                 loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                                            <span class="cat-minimal-tag" style="background: {{ $secAccent }};"><i class="bi {{ $secIcon }}"></i></span>
-                                        </span>
-                                        <span class="cat-minimal-body">
-                                            <h5>{{ Str::limit($item->title, 75) }}</h5>
-                                            @if (!empty($item->excerpt))
-                                                <p>{{ Str::limit($item->excerpt, 90) }}</p>
-                                            @endif
-                                            <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
-                                        </span>
-                                    </a>
-                                @endforeach
-                            </div>
-                            @break
+                    @case('stat')
+                        <div class="cat-stat-layout">
+                            @foreach ($secItems as $item)
+                                <a href="{{ route('news.show', $item->slug) }}" class="cat-stat-card">
+                                    <span class="cat-stat-img">
+                                        <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                             loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                    </span>
+                                    <span class="cat-stat-body">
+                                        <h5>{{ Str::limit($item->title, 70) }}</h5>
+                                        @if (!empty($item->excerpt))
+                                            <p>{{ Str::limit($item->excerpt, 80) }}</p>
+                                        @endif
+                                        <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                    </span>
+                                </a>
+                            @endforeach
+                        </div>
+                        @break
 
-                        @case('timeline')
-                            {{-- vertical accent line with a dot per item --}}
-                            <ul class="cat-timeline">
-                                @foreach ($secItems as $item)
-                                    <li class="cat-timeline-item">
-                                        <span class="cat-timeline-dot"></span>
-                                        <a href="{{ route('news.show', $item->slug) }}" class="cat-timeline-link">
-                                            <span class="news-meta timeline-date">{{ $item->published_at?->format('F j, Y') }}</span>
-                                            <h5>{{ Str::limit($item->title, 80) }}</h5>
-                                            @if (!empty($item->excerpt))
-                                                <p>{{ Str::limit($item->excerpt, 110) }}</p>
-                                            @endif
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
-                            @break
-
-                        @case('icon-card')
-                            {{-- 2-column cards with a round icon badge --}}
-                            <div class="cat-iconcard-layout">
-                                @foreach ($secItems as $item)
-                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-iconcard">
-                                        <span class="cat-iconcard-top" style="background: {{ $secAccent }};"><i class="bi {{ $secIcon }}"></i></span>
-                                        <span class="cat-iconcard-img">
-                                            <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
-                                                 loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                    @case('big-grid')
+                        <div class="cat-biggrid-layout">
+                            @if ($secLead)
+                                <a href="{{ route('news.show', $secLead->slug) }}" class="cat-biggrid-hero">
+                                    <img src="{{ ($imgUrl)($secLead) }}" alt="{{ $secLead->title }}"
+                                         loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                    <span class="cat-biggrid-hero-overlay">
+                                        <span class="cat-biggrid-hero-tag" style="background: {{ $secAccent }};">
+                                            <i class="bi {{ $secIcon }}"></i> {{ __('site.latest_news') }}
                                         </span>
-                                        <span class="cat-iconcard-body">
-                                            <h5>{{ Str::limit($item->title, 70) }}</h5>
-                                            @if (!empty($item->excerpt))
-                                                <p>{{ Str::limit($item->excerpt, 80) }}</p>
-                                            @endif
-                                            <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
-                                        </span>
-                                    </a>
-                                @endforeach
-                            </div>
-                            @break
-
-                        @default
-                            {{-- fallback: same as 'list' --}}
-                            <div class="cat-list-layout">
-                                @foreach ($secItems as $item)
-                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-list-row">
-                                        <span class="cat-list-num">{{ $loop->iteration }}</span>
-                                        <span class="cat-list-img">
-                                            <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
-                                                 loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                                        </span>
-                                        <span class="cat-list-body">
-                                            <h5>{{ Str::limit($item->title, 75) }}</h5>
-                                            <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
-                                        </span>
-                                    </a>
-                                @endforeach
-                            </div>
-
-                    @endswitch
-
-                    @if ($subwidget && !empty($subwidget['items']))
-                        <div class="sub-widget">
-                            @if (!empty($subwidget['title']))
-                                <h6 class="sub-widget-title">{{ $subwidget['title'] }}</h6>
+                                        <h3>{{ Str::limit($secLead->title, 90) }}</h3>
+                                        @if (!empty($secLead->excerpt))
+                                            <p>{{ Str::limit($secLead->excerpt, 130) }}</p>
+                                        @endif
+                                        <span class="news-meta light">{{ ($timeAgo)($secLead) }}</span>
+                                    </span>
+                                </a>
                             @endif
-                            <div class="sub-widget-grid">
-                                @foreach (collect($subwidget['items'])->take(6) as $item)
-                                    <a href="{{ route('news.show', $item->slug) }}" class="sub-widget-item">
-                                        <span class="sub-widget-thumb">
+                            @if ($secRest->isNotEmpty())
+                                <div class="cat-biggrid-grid">
+                                    @foreach ($secRest as $item)
+                                        <a href="{{ route('news.show', $item->slug) }}" class="cat-biggrid-card">
                                             <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
-                                                 loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                                        </span>
-                                        <span class="sub-widget-text">{{ Str::limit($item->title, 65) }}</span>
-                                    </a>
-                                @endforeach
-                            </div>
-                            @if (!empty($subwidget['view_all_url']))
-                                <a href="{{ $subwidget['view_all_url'] }}" class="sub-widget-more">{{ __('site.view_all') }} <i class="bi bi-chevron-right"></i></a>
+                                                 loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                            <span class="cat-biggrid-overlay">
+                                                <h5>{{ Str::limit($item->title, 60) }}</h5>
+                                                <span class="news-meta light">{{ ($timeAgo)($item) }}</span>
+                                            </span>
+                                        </a>
+                                    @endforeach
+                                </div>
                             @endif
                         </div>
-                    @endif
-                </div>
-            @endforeach
+                        @break
+
+                    @case('masonry')
+                        <div class="cat-masonry-layout">
+                            @foreach ($secItems as $index => $item)
+                                <a href="{{ route('news.show', $item->slug) }}" class="cat-masonry-card {{ $index % 3 == 0 ? 'tall' : '' }}">
+                                    <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                         loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                    <span class="cat-masonry-caption" style="background: linear-gradient(transparent, {{ $secAccent }}f2);">
+                                        {{ Str::limit($item->title, 55) }}
+                                    </span>
+                                </a>
+                            @endforeach
+                        </div>
+                        @break
+
+                    @case('minimal')
+                        <div class="cat-minimal-layout">
+                            @foreach ($secItems as $item)
+                                <a href="{{ route('news.show', $item->slug) }}" class="cat-minimal-card">
+                                    <span class="cat-minimal-img">
+                                        <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                             loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                        <span class="cat-minimal-tag" style="background: {{ $secAccent }};"><i class="bi {{ $secIcon }}"></i></span>
+                                    </span>
+                                    <span class="cat-minimal-body">
+                                        <h5>{{ Str::limit($item->title, 75) }}</h5>
+                                        @if (!empty($item->excerpt))
+                                            <p>{{ Str::limit($item->excerpt, 90) }}</p>
+                                        @endif
+                                        <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                    </span>
+                                </a>
+                            @endforeach
+                        </div>
+                        @break
+
+                    @case('timeline')
+                        <ul class="cat-timeline">
+                            @foreach ($secItems as $item)
+                                <li class="cat-timeline-item">
+                                    <span class="cat-timeline-dot"></span>
+                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-timeline-link">
+                                        <span class="news-meta timeline-date">{{ $item->published_at?->format('F j, Y') }}</span>
+                                        <h5>{{ Str::limit($item->title, 80) }}</h5>
+                                        @if (!empty($item->excerpt))
+                                            <p>{{ Str::limit($item->excerpt, 110) }}</p>
+                                        @endif
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                        @break
+
+                    @case('icon-card')
+                        <div class="cat-iconcard-layout">
+                            @foreach ($secItems as $item)
+                                <a href="{{ route('news.show', $item->slug) }}" class="cat-iconcard">
+                                    <span class="cat-iconcard-top" style="background: {{ $secAccent }};"><i class="bi {{ $secIcon }}"></i></span>
+                                    <span class="cat-iconcard-img">
+                                        <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                             loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                    </span>
+                                    <span class="cat-iconcard-body">
+                                        <h5>{{ Str::limit($item->title, 70) }}</h5>
+                                        @if (!empty($item->excerpt))
+                                            <p>{{ Str::limit($item->excerpt, 80) }}</p>
+                                        @endif
+                                        <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                    </span>
+                                </a>
+                            @endforeach
+                        </div>
+                        @break
+
+                    @case('split')
+                        <div class="cat-split-layout">
+                            @if ($secLead)
+                                <a href="{{ route('news.show', $secLead->slug) }}" class="cat-split-lead">
+                                    <span class="cat-split-lead-img">
+                                        <img src="{{ ($imgUrl)($secLead) }}" alt="{{ $secLead->title }}"
+                                             loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                    </span>
+                                    <span class="cat-split-lead-body">
+                                        <h3>{{ Str::limit($secLead->title, 90) }}</h3>
+                                        @if (!empty($secLead->excerpt))
+                                            <p>{{ Str::limit($secLead->excerpt, 120) }}</p>
+                                        @endif
+                                        <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($secLead) }}</span>
+                                    </span>
+                                </a>
+                            @endif
+                            <div class="cat-split-side">
+                                @foreach ($secRest as $item)
+                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-split-row">
+                                        <h5>{{ Str::limit($item->title, 70) }}</h5>
+                                        <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                        @break
+
+                    @case('carousel')
+                        <div class="cat-carousel">
+                            @foreach ($secItems as $item)
+                                <a href="{{ route('news.show', $item->slug) }}" class="cat-carousel-card">
+                                    <span class="cat-carousel-img">
+                                        <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                             loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                    </span>
+                                    <h5>{{ Str::limit($item->title, 60) }}</h5>
+                                    <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                        @break
+
+                    @case('headline')
+                        <ul class="cat-headline-layout">
+                            @foreach ($secItems as $item)
+                                <li>
+                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-headline-row">
+                                        <span class="cat-headline-dot"></span>
+                                        <span class="cat-headline-title">{{ Str::limit($item->title, 90) }}</span>
+                                        <span class="cat-headline-time">{{ ($timeAgo)($item) }}</span>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                        @break
+
+                    @default
+                        <div class="cat-list-layout">
+                            @foreach ($secItems as $item)
+                                <a href="{{ route('news.show', $item->slug) }}" class="cat-list-row">
+                                    <span class="cat-list-num">{{ $loop->iteration }}</span>
+                                    <span class="cat-list-img">
+                                        <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                             loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                    </span>
+                                    <span class="cat-list-body">
+                                        <h5>{{ Str::limit($item->title, 75) }}</h5>
+                                        <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                    </span>
+                                </a>
+                            @endforeach
+                        </div>
+
+                @endswitch
+
+                @if ($subwidget && $subItems->isNotEmpty())
+                    <div class="sub-widget">
+                        @if (!empty($subwidget['title']))
+                            <h6 class="sub-widget-title">{{ $subwidget['title'] }}</h6>
+                        @endif
+                        <div class="sub-widget-grid">
+                            @foreach ($subItems as $item)
+                                <a href="{{ route('news.show', $item->slug) }}" class="sub-widget-item">
+                                    <span class="sub-widget-thumb">
+                                        <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                             loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                    </span>
+                                    <span class="sub-widget-text">{{ Str::limit($item->title, 65) }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+        @endforeach
+
+        {{-- ================= PAGE ARROWS (category sections lai asar gardaina) ================= --}}
+        @if (method_exists($news, 'nextPageUrl') && ($news->previousPageUrl() || $news->nextPageUrl()))
+            <nav class="page-arrows" aria-label="Pagination">
+                @if ($news->previousPageUrl())
+                    <a href="{{ $news->previousPageUrl() }}" class="page-arrow" rel="prev" aria-label="Previous">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                @endif
+                @if ($news->nextPageUrl())
+                    <a href="{{ $news->nextPageUrl() }}" class="page-arrow" rel="next" aria-label="Next">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                @endif
+            </nav>
         @endif
     </div>
 
+    {{-- ================= SIDEBAR ================= --}}
     <div class="col-lg-4 sidebar-col">
         <div class="sidebar-box">
             <h5 class="sidebar-title">{{ __('site.trending') }}</h5>
@@ -566,8 +651,9 @@
         content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--border);
     }
 
+    /* ===== hero ===== */
     .hero-main {
-        position: relative; display: block; border-radius: var(--radius-lg); overflow: hidden;
+        position: relative; display: block; width: 100%; border-radius: var(--radius-lg); overflow: hidden;
         aspect-ratio: 16 / 9; max-height: 560px; isolation: isolate; box-shadow: var(--shadow-lg);
     }
     .hero-main:hover .hero-main-img { transform: scale(1.035); }
@@ -597,6 +683,7 @@
     .hero-side-item h6 { font-size: 17px; font-weight: 800; margin: 2px 0 8px; line-height: 1.38; color: var(--ink); }
     .hero-side-item:hover h6 { color: var(--brand); }
 
+    /* ===== spotlight ===== */
     .spotlight-scroll-wrap { position: relative; }
     .spotlight-track {
         display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory;
@@ -626,6 +713,7 @@
     }
     .spotlight-next:hover { background: var(--brand); color: #fff; transform: translateY(-50%) scale(1.06); }
 
+    /* ===== latest feed ===== */
     .news-feed { display: flex; flex-direction: column; }
     .feed-item {
         display: block; text-align: center; padding: 30px 0;
@@ -648,6 +736,7 @@
         max-width: 640px; margin-left: auto; margin-right: auto;
     }
 
+    /* ===== category sections ===== */
     .category-section {
         margin-top: 48px; padding-left: 18px;
         border-left: 3px solid color-mix(in srgb, var(--cat-accent) 35%, transparent);
@@ -685,6 +774,13 @@
         color: var(--cat-accent); border-color: var(--cat-accent);
     }
 
+    /* shared image behaviour inside category layouts */
+    .cat-list-img img, .cat-stat-img img, .cat-biggrid-hero img, .cat-biggrid-card img,
+    .cat-minimal-img img, .cat-iconcard-img img, .cat-split-lead-img img, .cat-carousel-img img {
+        display: block; width: 100%; height: 100%; object-fit: cover;
+        background: var(--surface-soft); transition: transform .35s var(--ease);
+    }
+
     /* ===== list ===== */
     .cat-list-layout { display: flex; flex-direction: column; gap: 12px; }
     .cat-list-row {
@@ -716,7 +812,7 @@
 
     /* ===== big-grid ===== */
     .cat-biggrid-hero {
-        display: block; position: relative; border-radius: var(--radius-lg);
+        display: block; position: relative; width: 100%; border-radius: var(--radius-lg);
         overflow: hidden; aspect-ratio: 16/9; max-height: 380px; margin-bottom: 16px; box-shadow: var(--shadow-md);
     }
     .cat-biggrid-hero:hover img { transform: scale(1.04); }
@@ -747,7 +843,10 @@
     .cat-masonry-card img { width: 100%; display: block; height: 200px; object-fit: cover; transition: transform .35s var(--ease); }
     .cat-masonry-card.tall img { height: 300px; }
     .cat-masonry-card:hover img { transform: scale(1.05); }
-    .cat-masonry-caption { display: block; color: #fff; font-size: 14px; font-weight: 700; padding: 12px 12px 10px; line-height: 1.4; }
+    .cat-masonry-caption {
+        position: absolute; left: 0; right: 0; bottom: 0;
+        display: block; color: #fff; font-size: 14px; font-weight: 700; padding: 28px 12px 10px; line-height: 1.4;
+    }
 
     /* ===== minimal ===== */
     .cat-minimal-layout { display: flex; flex-direction: column; gap: 2px; }
@@ -800,6 +899,39 @@
     .cat-iconcard:hover .cat-iconcard-body h5 { color: var(--cat-accent); }
     .cat-iconcard-body p { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.5; }
 
+    /* ===== split ===== */
+    .cat-split-layout { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; }
+    .cat-split-lead { display: block; }
+    .cat-split-lead-img { display: block; aspect-ratio: 16/10; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 12px; }
+    .cat-split-lead:hover img { transform: scale(1.04); }
+    .cat-split-lead-body { display: block; }
+    .cat-split-lead-body h3 { font-size: 21px; font-weight: 800; line-height: 1.35; margin: 0 0 6px; color: var(--ink); }
+    .cat-split-lead:hover h3 { color: var(--cat-accent); }
+    .cat-split-lead-body p { font-size: 14px; color: var(--muted); line-height: 1.6; margin: 0 0 4px; }
+    .cat-split-side { display: flex; flex-direction: column; }
+    .cat-split-row { display: block; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .cat-split-row:first-child { padding-top: 0; }
+    .cat-split-row:last-child { border-bottom: none; }
+    .cat-split-row h5 { font-size: 15.5px; font-weight: 700; line-height: 1.4; margin: 0; color: var(--ink); }
+    .cat-split-row:hover h5 { color: var(--cat-accent); }
+
+    /* ===== carousel ===== */
+    .cat-carousel { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; scrollbar-width: thin; }
+    .cat-carousel-card { flex: 0 0 230px; scroll-snap-align: start; display: block; }
+    .cat-carousel-img { display: block; aspect-ratio: 4/3; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 8px; }
+    .cat-carousel-card:hover img { transform: scale(1.06); }
+    .cat-carousel-card h5 { font-size: 15px; font-weight: 700; line-height: 1.4; margin: 0; color: var(--ink); }
+    .cat-carousel-card:hover h5 { color: var(--cat-accent); }
+
+    /* ===== headline ===== */
+    .cat-headline-layout { list-style: none; margin: 0; padding: 0; }
+    .cat-headline-row { display: flex; align-items: baseline; gap: 10px; padding: 11px 0; border-bottom: 1px dashed var(--border); }
+    .cat-headline-layout li:last-child .cat-headline-row { border-bottom: none; }
+    .cat-headline-dot { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--cat-accent); transform: translateY(-2px); }
+    .cat-headline-title { flex: 1; font-size: 15.5px; font-weight: 600; line-height: 1.45; color: var(--ink); }
+    .cat-headline-row:hover .cat-headline-title { color: var(--cat-accent); }
+    .cat-headline-time { flex-shrink: 0; font-size: 12px; color: var(--muted); }
+
     /* small secondary widget shared across layouts */
     .sub-widget { margin-top: 18px; background: var(--surface-soft); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px 20px 20px; }
     .sub-widget-title { font-size: 14px; font-weight: 800; color: var(--cat-accent); margin: 0 0 12px; }
@@ -812,6 +944,17 @@
     .sub-widget-more { display: inline-flex; align-items: center; gap: 2px; margin-top: 14px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
     .sub-widget-more:hover { color: var(--cat-accent); }
 
+    /* page arrows (prev / next) */
+    .page-arrows { display: flex; justify-content: flex-end; gap: 10px; margin: 36px 0 8px; }
+    .page-arrow {
+        width: 38px; height: 38px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        background: #e6eefb; color: #1f56c4; font-size: 15px;
+        transition: background .2s var(--ease), color .2s var(--ease), transform .2s var(--ease);
+    }
+    .page-arrow:hover { background: #1f56c4; color: #fff; transform: scale(1.06); }
+
+    /* ===== sidebar ===== */
     .sidebar-col { align-self: flex-start; position: sticky; top: 20px; }
     @media (min-width: 992px) {
         .sidebar-col { top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
@@ -830,6 +973,7 @@
     .trending-list-v2 li:hover .trend-thumb img { transform: scale(1.1); }
     .trend-empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
 
+    /* ===== ad ===== */
     .ad-banner-box { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-soft); text-align: center; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .ad-label { font-size: 10.5px; color: #a49a86; text-transform: uppercase; letter-spacing: 1.8px; font-weight: 700; }
     .ad-banner-placeholder { width: 100%; max-width: 970px; min-height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #b3a996; gap: 4px; }
@@ -849,7 +993,7 @@
         .cat-subnav-chip { font-size: 12px; padding: 4px 12px; }
         .sub-widget-grid { grid-template-columns: 1fr; }
 
-        .cat-stat-layout, .cat-biggrid-grid, .cat-iconcard-layout { grid-template-columns: 1fr; }
+        .cat-stat-layout, .cat-biggrid-grid, .cat-iconcard-layout, .cat-split-layout { grid-template-columns: 1fr; }
         .cat-masonry-layout { column-count: 1; }
         .cat-list-row { flex-direction: column; align-items: flex-start; }
         .cat-list-img { width: 100%; }
@@ -857,6 +1001,7 @@
         .cat-minimal-card { flex-direction: column; }
         .cat-biggrid-hero { max-height: 260px; }
         .cat-biggrid-hero-overlay h3 { font-size: 18px; }
+        .cat-carousel-card { flex-basis: 190px; }
     }
 </style>
 @endpush
