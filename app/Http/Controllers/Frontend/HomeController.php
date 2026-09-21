@@ -29,13 +29,7 @@ class HomeController extends Controller
         // यहि exact query हो जुन ViewServiceProvider ले navbar बनाउँदा प्रयोग गर्छ
         $navbarCategoryIds = Category::inNavbarFor($locale)->take(6)->pluck('id');
 
-        // homepage मा ती ID बाहेक बाँकी सबै categories (checkbox tick भए पनि
-        // navbar मा ठाउँ नपाएका हुन सक्छन् — तिनलाई पनि यहाँ समावेश गर्ने)
-        //
-        // ⚠️ 'subcategories' relation लाई तेरो Category model मा जोड़ — यदि
-        // categories self-referencing (parent_id) छन् भने:
-        //   public function subcategories() { return $this->hasMany(Category::class, 'parent_id'); }
-        // Relation add नगरेसम्म पनि crash नहोस् भनेर try/catch राखेको छु — तल हेर।
+        // homepage मा ती ID बाहेक बाँकी सबै categories
         try {
             $hiddenCategories = Category::with(['translations', 'subcategories'])
                 ->whereNotIn('id', $navbarCategoryIds)
@@ -57,19 +51,15 @@ class HomeController extends Controller
                 ->where('locale', $locale)
                 ->where('category_id', $cat->id)
                 ->latest('published_at')
-                ->take(8) // 'grid' ले 6 wota, 'text-list' ले 8 wota, 'lead-list' ले lead+rest लिन्छ — 8 सुरक्षित संख्या
+                ->take(8)
                 ->get();
 
             if ($catNews->isEmpty()) {
                 continue;
             }
 
-            // subcategories relation नभए यी दुबै खाली/null नै रहन्छन् — कुनै crash हुँदैन
             $subcategories = $hasSubcatRelation ? $cat->subcategories : collect();
 
-            // ⚠️ optional: एउटा sub-category लाई "sub-widget" (कर्पोरेट-जस्तो) को रूपमा
-            // छुट्टै छोटो card widget बनाउन चाहेमा — यहाँ पहिलो subcategory बाट 6 wota
-            // news तानेर देखाउने। नचाहिए यो block नै हटाइदिनु।
             $subWidget = null;
             if ($firstSub = $subcategories->first()) {
                 $subItems = News::with('category')
@@ -93,13 +83,9 @@ class HomeController extends Controller
                 'title'         => $cat->nameIn($locale),
                 'accent_color'  => $cat->accent_color,
                 'icon'          => $cat->icon,
-                // ⚠️ यहि field ले homepage मा layout decide गर्छ — index%2 होइन।
-                // Category admin form मा एउटा select add गर: block-list / lead-list / text-list / grid
                 'layout'        => $cat->layout_type,
                 'view_all_url'  => route('category.show', $cat->slug),
                 'items'         => $catNews,
-                // onlinekhabar-style chip nav (बिजनेस मुनि: अर्थनीति, पर्यटन...) —
-                // subcategories() relation नभए यो खाली array नै रहन्छ, blade ले skip गर्छ
                 'subcats'       => $subcategories
                     ->map(fn ($sub) => [
                         'title' => $sub->nameIn($locale) ?? $sub->name,
@@ -107,7 +93,6 @@ class HomeController extends Controller
                     ])
                     ->values()
                     ->all(),
-                // कर्पोरेट-जस्तो सानो secondary widget (optional — null भए blade ले skip गर्छ)
                 'subwidget'     => $subWidget,
             ];
         }

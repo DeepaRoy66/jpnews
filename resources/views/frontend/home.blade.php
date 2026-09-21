@@ -7,119 +7,44 @@
 @php
     /*
         ---------------------------------------------------------------
-        ASSUMED MODEL FIELDS — adjust the ones marked ⚠️ in ONE place.
+        LAYOUT VALUES — these MUST match App\Http\Controllers\Admin\
+        CategoryController::$layoutOptions exactly, or a category's
+        section silently falls back to 'list':
+            list | stat | big-grid | masonry | minimal | timeline | icon-card
 
+        (Earlier this file checked for 'block-list' / 'grid' / 'text-list'
+        which are NOT valid database values — every category was silently
+        falling through to the same design regardless of what was picked
+        in the admin panel. Fixed by switching on the real values below.)
+
+        ASSUMED MODEL FIELDS — adjust the ones marked ⚠️ in ONE place.
           News:     title, excerpt ⚠️, slug, image ⚠️, published_at,
                      views, category (relation), author (relation)
-          Category: nameIn($locale), slug, accent_color ⚠️, icon ⚠️
-                     (a bootstrap-icons class e.g. "bi-cpu"),
-                     layout_type ⚠️ (one of: lead-list | text-list | grid),
-                     subcategories() ⚠️ relation -> [nameIn($locale), slug]
+          Category: nameIn($locale), slug, accent_color ⚠️, icon ⚠️,
+                     layout_type ⚠️, subcategories() ⚠️ relation
           Author:    name ⚠️
 
-        ROUTE NAMES — adjust to match routes/web.php:
+        ROUTE NAMES:
           news detail  -> route('news.show', $item->slug)      ⚠️
           category     -> route('category.show', $slug)        ⚠️
 
-        TRANSLATION KEYS (resources/lang/{en,ne}/site.php):
-          site.home, site.latest_news, site.news_suffix, site.trending,
-          site.no_data, site.no_more_news, site.view_all,
-          site.ad_space, site.ad_placeholder,
-          site.mins_ago (:n), site.hours_ago (:n), site.days_ago (:n)
+        AD POLICY: one banner under the hero, page 1 only.
 
-        AD POLICY (per latest request)
-          Only ONE ad slot remains on the whole homepage: the single
-          banner right under the hero, on page 1 only. Both sidebar ad
-          boxes have been removed so the sidebar is 100% trending news.
-
-        CATEGORY LAYOUT POLICY — "editorial" per-category look
-          ("ajib deikhincha" fix: layout no longer auto-alternates by
-          index — real portals like onlinekhabar hand-pick a layout per
-          category, so we do the same via $category->layout_type.)
-
-          $categorySections drives the category blocks below the main
-          feed. Each entry carries:
-            'layout'       => 'lead-list' | 'text-list' | 'grid'
-                                falls back to $category->layout_type,
-                                then to 'lead-list' — NEVER derived
-                                from the section's index anymore.
-            'accent_color' => '#2f7d46'   // ⚠️ falls back to category->accent_color, then brand red
-            'icon'         => 'bi-cpu'    // ⚠️ falls back to category->icon, then a generic icon
-            'limit'        => 8            // optional — how many items this block
-                                shows (defaults to $defaultSectionLimit, 5 or 8
-                                are typical). The lead item + the rest together
-                                add up to this number, for every layout.
-            'view_all_url' => route(...)   // optional — where "view all" goes.
-                                Falls back to route('category.show', slug) so
-                                clicking through always lands on the full
-                                category page, which paginates via $news.
-            'subcats'      => [['title' => 'अर्थनीति', 'url' => '...'], ...]  // optional chip nav
-
-          Four distinct widgets (pick the one that fits the category,
-          in the admin panel — see controller note below):
-            - block-list : SOLID accent-colour block as the lead (no
-                            photo — headline + excerpt in white text),
-                            then a dense 2-column text-only grid below
-                            it. This is onlinekhabar's real pattern for
-                            News/Business-style sections — matches the
-                            reference screenshot exactly.
-            - lead-list  : one big lead PHOTO + a clean text-only
-                            headline list underneath. Good when the
-                            category actually has strong photos.
-            - text-list  : NO images, no colour block — just a plain
-                            single-column dense list of title + tag +
-                            time. Good for low-visual sections.
-            - grid       : 3-up photo grid, caption under image.
-                            Good for image-heavy sections like
-                            Entertainment/Photo Feature.
-
-          Optional per-section extras (used by block-list, but any
-          layout can carry them):
-            'subcats'    => chip row under the title — subcategory
-                            links (बिजनेस: अर्थनीति, पर्यटन...) OR plain
-                            numbered pills (प्रदेश समाचार: १, २, ३...).
-                            Renders as a single-row horizontal scroll,
-                            same as onlinekhabar, never wraps.
-            'subwidget'  => ['title' => 'कर्पोरेट', 'view_all_url' => ...,
-                              'items' => [...News...]]
-                            A small secondary card block under the main
-                            list — grey box, tiny square thumb + title,
-                            2-column, with a round "सबै" button. Matches
-                            the कर्पोरेट block under बिजनेस.
-
-          Each section keeps its own accent color on the title
-          underline / lead block, its icon badge, and its card tag —
-          so categories stay visually distinguishable even when two of
-          them share the same layout type.
-
-        IMAGE CONSISTENCY
-          Every image container is sized with CSS aspect-ratio (not a
-          fixed px height) + object-fit:cover, and every <img> carries
-          onerror="this.src='...placeholder'" — so source photos of any
-          resolution/orientation are auto-cropped to the same shape and
-          the grid never looks "jumpy".
-
-        DUPLICATE-NEWS GUARD (per "same news repeats everywhere")
-          $usedSlugs collects every slug already shown on the page as we
-          render top-to-bottom: hero main + hero side -> main feed lead
-          + list -> trending (spotlight + sidebar) -> each category
-          section. Every later block rejects anything already in
-          $usedSlugs before rendering, so no single news item can show
-          up twice on the same page load. Trending is also split into
-          a "spotlight" slice and a "sidebar" slice so those two blocks
-          don't just mirror the same list back at each other — swap the
-          slice logic below if you'd rather have the controller send
-          two genuinely different trending queries.
+        DUPLICATE-NEWS GUARD
+          $usedSlugs tracks hero / main feed / trending only. Category
+          sections deliberately do NOT filter against it — a category's
+          own section always shows that category's news, even if the
+          same item already appeared in the "Latest News" feed above
+          (see earlier discussion: with thin news volume per hidden
+          category, excluding already-shown items made whole sections
+          vanish).
         ---------------------------------------------------------------
     */
     $locale = app()->getLocale();
 
     $placeholder = asset('images/placeholder-news.jpg'); // ⚠️
 
-    // How many news items show per category block on the homepage before
-    // the user has to click "view all" into the full category page.
-    // Override per-section with $section['limit'] (see below). Typical: 5 or 8.
-    $defaultSectionLimit = 8; // ⚠️ set to 5 if you want a tighter homepage
+    $defaultSectionLimit = 8; // ⚠️ set to 5 for a tighter homepage
 
     $imgUrl = function ($item) use ($placeholder) {
         if (empty($item->image)) {
@@ -141,13 +66,11 @@
         return __('site.days_ago', ['n' => intdiv($h, 24)]);
     };
 
-    // "Just published" badge — flags anything under 15 minutes old.
     $isFresh = fn ($item) => $item->published_at && $item->published_at->diffInMinutes(now()) < 15;
 
     $newsItems   = collect($news->items());
     $onFirstPage = $news->currentPage() === 1;
 
-    // ---- duplicate guard: tracks every slug already shown, top to bottom ----
     $usedSlugs = collect();
 
     if ($onFirstPage) {
@@ -165,18 +88,12 @@
         $gridItems = $newsItems;
     }
 
-    // main feed (lead + rest) also claims its slugs before trending/sections run
     $usedSlugs = $usedSlugs->merge($gridItems->pluck('slug'));
 
-    // ---- trending: strip anything already shown above, then split into
-    //      a spotlight slice and a sidebar slice so the two blocks don't
-    //      just repeat the same list at each other ----
     $trendingFresh    = collect($trending ?? [])->reject(fn ($t) => $usedSlugs->contains($t->slug))->values();
     $trendingSpotlight = $trendingFresh->take(6)->values();
     $trendingSidebar   = $trendingFresh->slice(6)->values();
 
-    // if there weren't enough "fresh" trending items to fill the sidebar,
-    // fall back to the spotlight items rather than showing an empty box
     if ($trendingSidebar->isEmpty()) {
         $trendingSidebar = $trendingSpotlight;
     }
@@ -227,7 +144,6 @@
         </div>
     @endif
 
-    {{-- ================= THE ONLY AD SLOT ON THE PAGE ================= --}}
     <div class="ad-banner-box mb-4">
         <span class="ad-label">{{ __('site.ad_space') }}</span>
         <div class="ad-banner-placeholder">
@@ -236,7 +152,6 @@
         </div>
     </div>
 
-    {{-- ================= TRENDING SPOTLIGHT SLIDER ================= --}}
     @if ($trendingSpotlight->isNotEmpty())
         <div class="spotlight-section mb-4">
             <h4 class="section-title"><i class="bi bi-fire"></i> {{ __('site.trending') }}</h4>
@@ -265,12 +180,6 @@
 <div class="row">
     <div class="col-lg-8">
 
-        {{--
-            ================= MAIN NEWS BLOCK (onlinekhabar mobile-exact) =================
-            Pattern: EVERY item — title first (centered), meta below, then a full-width
-            image with caption underneath if the item has one. This matches the reference
-            screenshot exactly (not just a single lead item — every item in the feed).
-        --}}
         <h4 class="section-title">{{ $categoryName ?? __('site.latest_news') }}</h4>
 
         <div class="news-feed">
@@ -304,34 +213,21 @@
             @endforelse
         </div>
 
-        {{-- ================= PAGINATION ================= --}}
-        {{-- ⚠️ If unstyled: php artisan vendor:publish --tag=laravel-pagination
-             then {{ $news->links('pagination::bootstrap-5') }} --}}
         <div class="mt-4">
             {{ $news->links() }}
         </div>
 
         {{--
             ================= CATEGORY SECTIONS (page 1 only) =================
-            Each category gets its own accent color + icon + EDITORIALLY
-            chosen layout (from $category->layout_type, set per category in
-            the admin panel — not derived from the loop index anymore).
-
-            Duplicate guard: every section's items are filtered against
-            $usedSlugs (everything already shown in hero / main feed /
-            trending / earlier sections) before rendering, and whatever's
-            left is added back into $usedSlugs for the next section.
+            $layout is now one of the REAL admin values:
+            list | stat | big-grid | masonry | minimal | timeline | icon-card
         --}}
         @if ($onFirstPage && !empty($categorySections))
             @foreach ($categorySections as $secIndex => $section)
                 @php
-                    // Cap this category to 5/8 (or whatever 'limit' says) so the
-                    // homepage stays a preview — "view all" below takes the
-                    // reader into the full, paginated category page.
                     $secLimit = $section['limit'] ?? $defaultSectionLimit;
 
                     $secItems = collect($section['items'] ?? [])
-                        ->reject(fn ($i) => $usedSlugs->contains($i->slug))
                         ->take($secLimit)
                         ->values();
 
@@ -342,19 +238,13 @@
                     $secAccent = $section['accent_color'] ?? ($secLead->category->accent_color ?? null) ?? '#b81830'; // ⚠️
                     $secIcon   = $section['icon'] ?? ($secLead->category->icon ?? null) ?? 'bi-grid-3x3-gap-fill'; // ⚠️
 
-                    // ---- EDITORIAL layout pick — never index-based anymore ----
                     $layout = $section['layout']
                         ?? ($secLead->category->layout_type ?? null) // ⚠️
-                        ?? 'block-list';
+                        ?? 'list';
 
                     $subcats   = $section['subcats'] ?? [];
                     $subwidget = $section['subwidget'] ?? null;
 
-                    // "view all" -> full category page. That page reuses this
-                    // same view with $categoryName + a category-filtered,
-                    // paginated $news, so $news->links() already gives it
-                    // real pagination — clicking through is how the reader
-                    // sees everything beyond this 5/8-item preview.
                     $viewAllUrl = $section['view_all_url']
                         ?? (($secLead->category->slug ?? null) ? route('category.show', $secLead->category->slug) : null); // ⚠️
                 @endphp
@@ -382,109 +272,202 @@
                         </div>
                     @endif
 
-                    @if ($layout === 'block-list')
-                        {{-- ---- BLOCK-LIST: solid accent-colour lead block (no photo) +
-                              dense 2-column text-only grid — onlinekhabar's real pattern
-                              for समाचार / बिजनेस style sections ---- --}}
-                        @if ($secLead)
-                            <a href="{{ route('news.show', $secLead->slug) }}" class="block-lead">
-                                <h3>{{ $secLead->title }}</h3>
-                                @if (!empty($secLead->excerpt))
-                                    <p>{{ Str::limit($secLead->excerpt, 140) }}</p>
-                                @endif
-                            </a>
-                        @endif
+                    @switch($layout)
 
-                        @if ($secRest->isNotEmpty())
-                            <ul class="text-grid cols-{{ $section['columns'] ?? 2 }}">
-                                @foreach ($secRest as $item)
-                                    <li>
-                                        <a href="{{ route('news.show', $item->slug) }}">{{ Str::limit($item->title, 70) }}</a>
+                        @case('list')
+                            {{-- numbered rows, image left, title+excerpt right --}}
+                            <div class="cat-list-layout">
+                                @foreach ($secItems as $item)
+                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-list-row">
+                                        <span class="cat-list-num">{{ $loop->iteration }}</span>
+                                        <span class="cat-list-img">
+                                            <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                                 loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                        </span>
+                                        <span class="cat-list-body">
+                                            <h5>{{ Str::limit($item->title, 75) }}</h5>
+                                            @if (!empty($item->excerpt))
+                                                <p>{{ Str::limit($item->excerpt, 100) }}</p>
+                                            @endif
+                                            <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                        </span>
+                                    </a>
+                                @endforeach
+                            </div>
+                            @break
+
+                        @case('stat')
+                            {{-- 2-column photo cards --}}
+                            <div class="cat-stat-layout">
+                                @foreach ($secItems as $item)
+                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-stat-card">
+                                        <span class="cat-stat-img">
+                                            <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                                 loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                        </span>
+                                        <span class="cat-stat-body">
+                                            <h5>{{ Str::limit($item->title, 70) }}</h5>
+                                            @if (!empty($item->excerpt))
+                                                <p>{{ Str::limit($item->excerpt, 80) }}</p>
+                                            @endif
+                                            <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                        </span>
+                                    </a>
+                                @endforeach
+                            </div>
+                            @break
+
+                        @case('big-grid')
+                            {{-- one big hero item + smaller tiles below --}}
+                            <div class="cat-biggrid-layout">
+                                @if ($secLead)
+                                    <a href="{{ route('news.show', $secLead->slug) }}" class="cat-biggrid-hero">
+                                        <img src="{{ ($imgUrl)($secLead) }}" alt="{{ $secLead->title }}"
+                                             loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                        <span class="cat-biggrid-hero-overlay">
+                                            <span class="cat-biggrid-hero-tag" style="background: {{ $secAccent }};">
+                                                <i class="bi {{ $secIcon }}"></i> {{ __('site.latest_news') }}
+                                            </span>
+                                            <h3>{{ Str::limit($secLead->title, 90) }}</h3>
+                                            @if (!empty($secLead->excerpt))
+                                                <p>{{ Str::limit($secLead->excerpt, 130) }}</p>
+                                            @endif
+                                            <span class="news-meta light">{{ ($timeAgo)($secLead) }}</span>
+                                        </span>
+                                    </a>
+                                @endif
+                                @if ($secRest->isNotEmpty())
+                                    <div class="cat-biggrid-grid">
+                                        @foreach ($secRest as $item)
+                                            <a href="{{ route('news.show', $item->slug) }}" class="cat-biggrid-card">
+                                                <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                                     loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                                <span class="cat-biggrid-overlay">
+                                                    <h5>{{ Str::limit($item->title, 60) }}</h5>
+                                                    <span class="news-meta light">{{ ($timeAgo)($item) }}</span>
+                                                </span>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                            @break
+
+                        @case('masonry')
+                            {{-- pinterest-style columns, varying heights --}}
+                            <div class="cat-masonry-layout">
+                                @foreach ($secItems as $index => $item)
+                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-masonry-card {{ $index % 3 == 0 ? 'tall' : '' }}">
+                                        <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                             loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                        <span class="cat-masonry-caption" style="background: linear-gradient(transparent, {{ $secAccent }}f2);">
+                                            {{ Str::limit($item->title, 55) }}
+                                        </span>
+                                    </a>
+                                @endforeach
+                            </div>
+                            @break
+
+                        @case('minimal')
+                            {{-- horizontal rows, small thumb + tagged icon --}}
+                            <div class="cat-minimal-layout">
+                                @foreach ($secItems as $item)
+                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-minimal-card">
+                                        <span class="cat-minimal-img">
+                                            <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                                 loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                            <span class="cat-minimal-tag" style="background: {{ $secAccent }};"><i class="bi {{ $secIcon }}"></i></span>
+                                        </span>
+                                        <span class="cat-minimal-body">
+                                            <h5>{{ Str::limit($item->title, 75) }}</h5>
+                                            @if (!empty($item->excerpt))
+                                                <p>{{ Str::limit($item->excerpt, 90) }}</p>
+                                            @endif
+                                            <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                        </span>
+                                    </a>
+                                @endforeach
+                            </div>
+                            @break
+
+                        @case('timeline')
+                            {{-- vertical accent line with a dot per item --}}
+                            <ul class="cat-timeline">
+                                @foreach ($secItems as $item)
+                                    <li class="cat-timeline-item">
+                                        <span class="cat-timeline-dot"></span>
+                                        <a href="{{ route('news.show', $item->slug) }}" class="cat-timeline-link">
+                                            <span class="news-meta timeline-date">{{ $item->published_at?->format('F j, Y') }}</span>
+                                            <h5>{{ Str::limit($item->title, 80) }}</h5>
+                                            @if (!empty($item->excerpt))
+                                                <p>{{ Str::limit($item->excerpt, 110) }}</p>
+                                            @endif
+                                        </a>
                                     </li>
                                 @endforeach
                             </ul>
-                        @endif
+                            @break
 
-                        @if ($subwidget && !empty($subwidget['items']))
-                            <div class="sub-widget">
-                                @if (!empty($subwidget['title']))
-                                    <h6 class="sub-widget-title">{{ $subwidget['title'] }}</h6>
-                                @endif
-                                <div class="sub-widget-grid">
-                                    @foreach (collect($subwidget['items'])->take(6) as $item)
-                                        <a href="{{ route('news.show', $item->slug) }}" class="sub-widget-item">
-                                            <span class="sub-widget-thumb">
-                                                <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
-                                                     loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                                            </span>
-                                            <span class="sub-widget-text">{{ Str::limit($item->title, 65) }}</span>
-                                        </a>
-                                    @endforeach
-                                </div>
-                                @if (!empty($subwidget['view_all_url']))
-                                    <a href="{{ $subwidget['view_all_url'] }}" class="sub-widget-more">{{ __('site.view_all') }} <i class="bi bi-chevron-right"></i></a>
-                                @endif
-                            </div>
-                        @endif
-
-                    @elseif ($layout === 'grid')
-                        {{-- ---- GRID: 3-up photo-report cards, caption UNDER image ---- --}}
-                        <div class="news-grid">
-                            @foreach ($secItems as $item)
-                                <a href="{{ route('news.show', $item->slug) }}" class="news-grid-card">
-                                    <div class="news-grid-img">
-                                        <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
-                                             loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                                    </div>
-                                    <h5>{{ Str::limit($item->title, 90) }}</h5>
-                                    <div class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</div>
-                                </a>
-                            @endforeach
-                        </div>
-
-                    @elseif ($layout === 'text-list')
-                        {{-- ---- TEXT-LIST: no images at all — dense, editorial "wire" list.
-                              Good for high-volume sections (Tech, Lifestyle) where a photo
-                              per row just adds visual noise. ---- --}}
-                        <ul class="headline-list wire">
-                            @foreach ($secItems as $item)
-                                <li>
-                                    <a href="{{ route('news.show', $item->slug) }}">
-                                        @if ($item->category)
-                                            <span class="tag-label">{{ ($catName)($item) }}</span>
-                                        @endif
-                                        <span class="headline-text">{{ Str::limit($item->title, 85) }}</span>
-                                        <span class="headline-time">{{ ($timeAgo)($item) }}</span>
+                        @case('icon-card')
+                            {{-- 2-column cards with a round icon badge --}}
+                            <div class="cat-iconcard-layout">
+                                @foreach ($secItems as $item)
+                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-iconcard">
+                                        <span class="cat-iconcard-top" style="background: {{ $secAccent }};"><i class="bi {{ $secIcon }}"></i></span>
+                                        <span class="cat-iconcard-img">
+                                            <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                                 loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                        </span>
+                                        <span class="cat-iconcard-body">
+                                            <h5>{{ Str::limit($item->title, 70) }}</h5>
+                                            @if (!empty($item->excerpt))
+                                                <p>{{ Str::limit($item->excerpt, 80) }}</p>
+                                            @endif
+                                            <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                        </span>
                                     </a>
-                                </li>
-                            @endforeach
-                        </ul>
+                                @endforeach
+                            </div>
+                            @break
 
-                    @else
-                        {{-- ---- LEAD-LIST (default): one lead photo + text-only list ---- --}}
-                        <div class="category-block">
-                            @if ($secLead)
-                                <a href="{{ route('news.show', $secLead->slug) }}" class="category-lead">
-                                    <div class="category-lead-img">
-                                        <img src="{{ ($imgUrl)($secLead) }}" alt="{{ $secLead->title }}"
-                                             loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                                    </div>
-                                    <h5>{{ Str::limit($secLead->title, 80) }}</h5>
-                                    <div class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($secLead) }}</div>
-                                </a>
+                        @default
+                            {{-- fallback: same as 'list' --}}
+                            <div class="cat-list-layout">
+                                @foreach ($secItems as $item)
+                                    <a href="{{ route('news.show', $item->slug) }}" class="cat-list-row">
+                                        <span class="cat-list-num">{{ $loop->iteration }}</span>
+                                        <span class="cat-list-img">
+                                            <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                                 loading="lazy" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                        </span>
+                                        <span class="cat-list-body">
+                                            <h5>{{ Str::limit($item->title, 75) }}</h5>
+                                            <span class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($item) }}</span>
+                                        </span>
+                                    </a>
+                                @endforeach
+                            </div>
+
+                    @endswitch
+
+                    @if ($subwidget && !empty($subwidget['items']))
+                        <div class="sub-widget">
+                            @if (!empty($subwidget['title']))
+                                <h6 class="sub-widget-title">{{ $subwidget['title'] }}</h6>
                             @endif
-
-                            @if ($secRest->isNotEmpty())
-                                <ul class="headline-list compact">
-                                    @foreach ($secRest as $item)
-                                        <li>
-                                            <a href="{{ route('news.show', $item->slug) }}">
-                                                <span class="headline-text">{{ Str::limit($item->title, 70) }}</span>
-                                                <span class="headline-time">{{ ($timeAgo)($item) }}</span>
-                                            </a>
-                                        </li>
-                                    @endforeach
-                                </ul>
+                            <div class="sub-widget-grid">
+                                @foreach (collect($subwidget['items'])->take(6) as $item)
+                                    <a href="{{ route('news.show', $item->slug) }}" class="sub-widget-item">
+                                        <span class="sub-widget-thumb">
+                                            <img src="{{ ($imgUrl)($item) }}" alt="{{ $item->title }}"
+                                                 loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                                        </span>
+                                        <span class="sub-widget-text">{{ Str::limit($item->title, 65) }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                            @if (!empty($subwidget['view_all_url']))
+                                <a href="{{ $subwidget['view_all_url'] }}" class="sub-widget-more">{{ __('site.view_all') }} <i class="bi bi-chevron-right"></i></a>
                             @endif
                         </div>
                     @endif
@@ -493,7 +476,6 @@
         @endif
     </div>
 
-    {{-- ================= SIDEBAR (trending only — no ads here) ================= --}}
     <div class="col-lg-4 sidebar-col">
         <div class="sidebar-box">
             <h5 class="sidebar-title">{{ __('site.trending') }}</h5>
@@ -549,16 +531,10 @@
     .hero-main-img,
     .hero-side-item img,
     .spotlight-card img,
-    .lead-feature-img img,
     .feed-item-img img,
-    .category-lead-img img,
-    .news-grid-img img,
     .trend-thumb img {
-        display: block;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: center;
+        display: block; width: 100%; height: 100%;
+        object-fit: cover; object-position: center;
         background: var(--surface-soft);
         transition: transform .5s var(--ease);
     }
@@ -572,13 +548,8 @@
     }
     .badge-category.small { font-size: 10px; padding: 3px 10px; }
 
-    .tag-label {
-        display: inline-block; font-size: 10.5px; font-weight: 700; color: var(--brand);
-        text-transform: uppercase; letter-spacing: .4px; margin-right: 8px; flex-shrink: 0;
-    }
-
     .news-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13.5px; color: var(--muted); margin-top: 6px; }
-    .news-meta.light .meta-chip { color: rgba(255,255,255,.85); }
+    .news-meta.light { color: rgba(255,255,255,.85); }
     .news-meta.tiny { font-size: 12.5px; gap: 6px; margin-top: 4px; }
     .meta-chip { display: inline-flex; align-items: center; gap: 5px; }
 
@@ -624,7 +595,6 @@
     .hero-side-item:hover img { transform: scale(1.08); }
     .hero-side-img-wrap { flex-shrink: 0; width: 150px; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; }
     .hero-side-item h6 { font-size: 17px; font-weight: 800; margin: 2px 0 8px; line-height: 1.38; color: var(--ink); }
-    .hero-side-item .news-meta { font-size: 14px; }
     .hero-side-item:hover h6 { color: var(--brand); }
 
     .spotlight-scroll-wrap { position: relative; }
@@ -656,10 +626,6 @@
     }
     .spotlight-next:hover { background: var(--brand); color: #fff; transform: translateY(-50%) scale(1.06); }
 
-    .news-block { display: flex; flex-direction: column; }
-
-    /* MAIN FEED — onlinekhabar-exact: every item is title -> centered meta ->
-       full-width image -> caption, stacked one after another */
     .news-feed { display: flex; flex-direction: column; }
     .feed-item {
         display: block; text-align: center; padding: 30px 0;
@@ -675,93 +641,18 @@
     .feed-item:hover h3 { color: var(--brand); }
     .news-meta.center { justify-content: center; margin-bottom: 16px; }
     .meta-chip.fresh { color: #2ecc71; font-weight: 700; }
-    .feed-item-img {
-        width: 100%; aspect-ratio: 16 / 9; overflow: hidden; margin-bottom: 12px;
-        border-radius: var(--radius-md);
-    }
+    .feed-item-img { width: 100%; aspect-ratio: 16 / 9; overflow: hidden; margin-bottom: 12px; border-radius: var(--radius-md); }
     .feed-item:hover .feed-item-img img { transform: scale(1.03); }
     .feed-item-caption {
         font-size: 14px; color: var(--muted); line-height: 1.7; margin: 0;
         max-width: 640px; margin-left: auto; margin-right: auto;
     }
 
-    .lead-feature {
-        display: block; background: var(--surface-soft);
-        border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 4px;
-        border: 1px solid var(--border); box-shadow: var(--shadow-md);
-        transition: box-shadow .25s var(--ease);
-    }
-    .lead-feature:hover { box-shadow: var(--shadow-lg); }
-    .lead-feature-img { width: 100%; aspect-ratio: 16 / 9; max-height: 300px; overflow: hidden; }
-    .lead-feature:hover .lead-feature-img img { transform: scale(1.05); }
-    .lead-feature-body { padding: 22px 26px 24px; }
-    .lead-feature-title {
-        font-family: 'Source Serif 4', Georgia, serif; font-weight: 800; font-size: 25px;
-        line-height: 1.34; color: var(--ink); margin: 0 0 10px; letter-spacing: -.2px;
-    }
-    .lead-feature:hover .lead-feature-title { color: var(--brand); }
-    .lead-feature-body p { font-size: 15px; color: #4a4a4a; margin-bottom: 4px; line-height: 1.6; }
-
-    .headline-list { list-style: none; margin: 0; padding: 0; }
-    .headline-list li {
-        border-bottom: 1px solid var(--border);
-        opacity: 0; animation: rowIn .5s var(--ease) forwards;
-        animation-delay: calc(var(--stagger, 0) * 35ms);
-    }
-    .headline-list li:last-child { border-bottom: none; }
-    .headline-list a {
-        display: flex; align-items: center; gap: 14px;
-        padding: 14px 6px; color: var(--ink);
-        border-radius: 8px; transition: background .18s var(--ease);
-    }
-    .headline-list a:hover { background: var(--surface-soft); }
-    .headline-list a:hover .headline-text { color: var(--brand); }
-    .headline-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-    .headline-text {
-        font-size: 16px; font-weight: 600; line-height: 1.45; color: var(--ink);
-        transition: color .18s var(--ease);
-        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .headline-time {
-        flex-shrink: 0; font-size: 12.5px; color: var(--muted); white-space: nowrap;
-        display: inline-flex; align-items: center; gap: 4px;
-    }
-    .headline-list.compact a { padding: 12px 4px; }
-    .headline-list.compact .headline-text { font-size: 14.5px; font-weight: 500; -webkit-line-clamp: 1; }
-
-    /* TEXT-LIST layout: dense, image-free "wire" list */
-    .headline-list.wire a {
-        padding: 12px 4px; gap: 10px; flex-wrap: nowrap;
-    }
-    .headline-list.wire .headline-text {
-        flex: 1; font-size: 15px; font-weight: 600; -webkit-line-clamp: 1;
-    }
-    .headline-list.wire .tag-label { margin-right: 0; }
-
-    .headline-thumb {
-        position: relative; flex-shrink: 0; width: 92px; aspect-ratio: 4 / 3;
-        border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-sm);
-    }
-    .headline-list a:hover .headline-thumb img { transform: scale(1.1); }
-    .fresh-dot {
-        position: absolute; top: 6px; left: 6px; width: 8px; height: 8px;
-        border-radius: 50%; background: #2ecc71; box-shadow: 0 0 0 2px rgba(255,255,255,.9);
-    }
-
-    @keyframes rowIn {
-        from { opacity: 0; transform: translateY(6px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-
     .category-section {
-        margin-top: 48px;
-        padding-left: 18px;
+        margin-top: 48px; padding-left: 18px;
         border-left: 3px solid color-mix(in srgb, var(--cat-accent) 35%, transparent);
     }
-    .category-section-head {
-        display: flex; align-items: center; gap: 12px;
-        margin-bottom: 14px;
-    }
+    .category-section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
     .category-icon-badge {
         flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px;
         display: flex; align-items: center; justify-content: center;
@@ -778,179 +669,170 @@
     }
     .view-all-link:hover { color: var(--cat-accent); }
 
-    /* Subcategory chip nav, onlinekhabar-style (e.g. बिजनेस -> अर्थनीति, पर्यटन, बैंक...
-       or प्रदेश समाचार -> numbered province pills १,२,३...) — single row, scrolls, never wraps */
     .cat-subnav {
         display: flex; flex-wrap: nowrap; gap: 8px; margin-bottom: 20px;
         overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
     }
     .cat-subnav::-webkit-scrollbar { display: none; }
     .cat-subnav-chip {
-        flex: 0 0 auto;
-        font-size: 12.5px; font-weight: 700; color: var(--muted);
+        flex: 0 0 auto; font-size: 12.5px; font-weight: 700; color: var(--muted);
         background: var(--surface-soft); border: 1px solid var(--border);
         border-radius: 999px; padding: 5px 14px; white-space: nowrap;
         transition: background .18s var(--ease), color .18s var(--ease), border-color .18s var(--ease);
     }
-    .cat-subnav-chip:hover,
-    .cat-subnav-chip.active {
+    .cat-subnav-chip:hover {
         background: color-mix(in srgb, var(--cat-accent) 12%, #fff);
         color: var(--cat-accent); border-color: var(--cat-accent);
     }
 
-    /* BLOCK-LIST layout: solid accent-colour lead (no photo) + dense text grid */
-    .block-lead {
-        display: block; background: var(--cat-accent);
-        border-radius: var(--radius-lg); padding: 26px 28px;
-        margin-bottom: 22px; box-shadow: var(--shadow-md);
-        transition: box-shadow .25s var(--ease), transform .25s var(--ease);
+    /* ===== list ===== */
+    .cat-list-layout { display: flex; flex-direction: column; gap: 12px; }
+    .cat-list-row {
+        display: flex; align-items: center; gap: 16px; background: var(--surface);
+        border: 1px solid var(--border); border-radius: var(--radius-md);
+        padding: 14px; box-shadow: var(--shadow-sm); transition: box-shadow .2s var(--ease), transform .2s var(--ease);
     }
-    .block-lead:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
-    .block-lead h3 {
-        color: #fff; font-weight: 800; font-size: 22px; line-height: 1.36;
-        margin: 0 0 8px; letter-spacing: -.2px;
-    }
-    .block-lead p {
-        color: rgba(255,255,255,.88); font-size: 14px; line-height: 1.6; margin: 0;
-    }
+    .cat-list-row:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+    .cat-list-num { font-size: 24px; font-weight: 800; min-width: 30px; color: var(--cat-accent); opacity: .5; flex-shrink: 0; }
+    .cat-list-img { flex-shrink: 0; width: 150px; aspect-ratio: 4/3; border-radius: 8px; overflow: hidden; }
+    .cat-list-body h5 { font-size: 17px; font-weight: 700; margin: 0 0 4px; line-height: 1.4; color: var(--ink); }
+    .cat-list-row:hover .cat-list-body h5 { color: var(--cat-accent); }
+    .cat-list-body p { font-size: 13.5px; color: var(--muted); margin: 0 0 4px; line-height: 1.55; }
 
-    .text-grid {
-        list-style: none; margin: 0 0 8px; padding: 0;
-        display: grid; grid-template-columns: repeat(2, 1fr);
-        gap: 4px 28px;
+    /* ===== stat ===== */
+    .cat-stat-layout { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    .cat-stat-card {
+        display: block; background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm);
+        transition: box-shadow .2s var(--ease), transform .2s var(--ease);
     }
-    .text-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
-    .text-grid li {
+    .cat-stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .cat-stat-img { display: block; aspect-ratio: 16/10; overflow: hidden; }
+    .cat-stat-card:hover .cat-stat-img img { transform: scale(1.05); }
+    .cat-stat-body { display: block; padding: 14px; }
+    .cat-stat-body h5 { font-size: 15.5px; font-weight: 700; margin: 0 0 6px; line-height: 1.4; color: var(--ink); }
+    .cat-stat-card:hover .cat-stat-body h5 { color: var(--cat-accent); }
+    .cat-stat-body p { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.5; }
+
+    /* ===== big-grid ===== */
+    .cat-biggrid-hero {
+        display: block; position: relative; border-radius: var(--radius-lg);
+        overflow: hidden; aspect-ratio: 16/9; max-height: 380px; margin-bottom: 16px; box-shadow: var(--shadow-md);
+    }
+    .cat-biggrid-hero:hover img { transform: scale(1.04); }
+    .cat-biggrid-hero-overlay {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,.9));
+        padding: 26px 24px 20px; display: block;
+    }
+    .cat-biggrid-hero-tag {
+        display: inline-block; color: #fff; font-size: 11px; font-weight: 700;
+        padding: 5px 13px; border-radius: 20px; margin-bottom: 10px;
+        text-transform: uppercase; letter-spacing: .5px;
+    }
+    .cat-biggrid-hero-overlay h3 { color: #fff; font-size: 22px; font-weight: 800; margin: 0 0 6px; line-height: 1.32; }
+    .cat-biggrid-hero-overlay p { color: #e4e4e4; font-size: 14px; margin: 0 0 6px; max-width: 640px; line-height: 1.5; }
+    .cat-biggrid-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .cat-biggrid-card { display: block; position: relative; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; box-shadow: var(--shadow-sm); }
+    .cat-biggrid-card:hover img { transform: scale(1.06); }
+    .cat-biggrid-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,.88)); padding: 12px; display: block; }
+    .cat-biggrid-overlay h5 { color: #fff; font-size: 14px; font-weight: 700; margin: 0 0 4px; line-height: 1.35; }
+
+    /* ===== masonry ===== */
+    .cat-masonry-layout { column-count: 2; column-gap: 14px; }
+    .cat-masonry-card {
+        display: block; break-inside: avoid; margin-bottom: 14px; position: relative;
+        border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-sm);
+    }
+    .cat-masonry-card img { width: 100%; display: block; height: 200px; object-fit: cover; transition: transform .35s var(--ease); }
+    .cat-masonry-card.tall img { height: 300px; }
+    .cat-masonry-card:hover img { transform: scale(1.05); }
+    .cat-masonry-caption { display: block; color: #fff; font-size: 14px; font-weight: 700; padding: 12px 12px 10px; line-height: 1.4; }
+
+    /* ===== minimal ===== */
+    .cat-minimal-layout { display: flex; flex-direction: column; gap: 2px; }
+    .cat-minimal-card {
+        display: flex; gap: 16px; align-items: flex-start; padding: 16px 0;
         border-bottom: 1px solid var(--border);
     }
-    .text-grid a {
-        display: block; padding: 13px 2px; font-size: 14.5px; font-weight: 600;
-        color: var(--ink); line-height: 1.5;
+    .cat-minimal-card:last-child { border-bottom: none; }
+    .cat-minimal-img { position: relative; flex-shrink: 0; width: 140px; aspect-ratio: 4/3; border-radius: 8px; overflow: hidden; }
+    .cat-minimal-card:hover .cat-minimal-img img { transform: scale(1.06); }
+    .cat-minimal-tag {
+        position: absolute; bottom: 6px; left: 6px; width: 24px; height: 24px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px;
+        box-shadow: 0 2px 6px rgba(0,0,0,.25);
     }
-    .text-grid a:hover { color: var(--cat-accent); }
+    .cat-minimal-body h5 { font-size: 16px; font-weight: 700; margin: 0 0 4px; line-height: 1.4; color: var(--ink); }
+    .cat-minimal-card:hover .cat-minimal-body h5 { color: var(--cat-accent); }
+    .cat-minimal-body p { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.5; }
 
-    /* Small secondary widget under a block-list section (e.g. कर्पोरेट under बिजनेस) */
-    .sub-widget {
-        margin-top: 18px; background: var(--surface-soft); border: 1px solid var(--border);
-        border-radius: var(--radius-md); padding: 18px 20px 20px;
+    /* ===== timeline ===== */
+    .cat-timeline { list-style: none; margin: 0; padding: 0; position: relative; padding-left: 28px; }
+    .cat-timeline::before { content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 2px; background: var(--border); }
+    .cat-timeline-item { position: relative; padding-bottom: 22px; }
+    .cat-timeline-item:last-child { padding-bottom: 0; }
+    .cat-timeline-dot {
+        position: absolute; left: -28px; top: 5px; width: 13px; height: 13px; border-radius: 50%;
+        background: var(--cat-accent); border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--cat-accent);
     }
+    .cat-timeline-link .timeline-date { font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--cat-accent); }
+    .cat-timeline-link h5 { font-size: 16px; font-weight: 700; margin: 4px 0; color: var(--ink); line-height: 1.4; }
+    .cat-timeline-link:hover h5 { color: var(--cat-accent); }
+    .cat-timeline-link p { font-size: 13.5px; color: var(--muted); margin: 0 0 6px; line-height: 1.6; }
+
+    /* ===== icon-card ===== */
+    .cat-iconcard-layout { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    .cat-iconcard {
+        display: block; background: var(--surface); border-radius: 12px; overflow: hidden;
+        position: relative; box-shadow: var(--shadow-sm); transition: box-shadow .2s var(--ease), transform .2s var(--ease);
+    }
+    .cat-iconcard:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .cat-iconcard-top {
+        position: absolute; top: 12px; left: 12px; width: 40px; height: 40px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center; color: #fff; font-size: 17px;
+        z-index: 2; box-shadow: 0 3px 8px rgba(0,0,0,.2);
+    }
+    .cat-iconcard-img { display: block; aspect-ratio: 16/10; overflow: hidden; position: relative; }
+    .cat-iconcard:hover .cat-iconcard-img img { transform: scale(1.06); }
+    .cat-iconcard-body { display: block; padding: 14px; }
+    .cat-iconcard-body h5 { font-size: 15.5px; font-weight: 700; margin: 0 0 6px; line-height: 1.4; color: var(--ink); }
+    .cat-iconcard:hover .cat-iconcard-body h5 { color: var(--cat-accent); }
+    .cat-iconcard-body p { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.5; }
+
+    /* small secondary widget shared across layouts */
+    .sub-widget { margin-top: 18px; background: var(--surface-soft); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px 20px 20px; }
     .sub-widget-title { font-size: 14px; font-weight: 800; color: var(--cat-accent); margin: 0 0 12px; }
     .sub-widget-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 20px; }
     .sub-widget-item { display: flex; align-items: center; gap: 10px; }
-    .sub-widget-thumb {
-        flex-shrink: 0; width: 40px; height: 40px; border-radius: 7px; overflow: hidden;
-        background: var(--surface);
-    }
+    .sub-widget-thumb { flex-shrink: 0; width: 40px; height: 40px; border-radius: 7px; overflow: hidden; background: var(--surface); }
     .sub-widget-thumb img { width: 100%; height: 100%; object-fit: cover; }
     .sub-widget-text { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.4; }
     .sub-widget-item:hover .sub-widget-text { color: var(--cat-accent); }
-    .sub-widget-more {
-        display: inline-flex; align-items: center; gap: 2px; margin-top: 14px;
-        font-size: 12.5px; font-weight: 700; color: var(--muted);
-    }
+    .sub-widget-more { display: inline-flex; align-items: center; gap: 2px; margin-top: 14px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
     .sub-widget-more:hover { color: var(--cat-accent); }
 
-    .category-block {
-         display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: 20px;
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm);
-    }
-    .category-lead { display: block; }
-    .category-lead-img { width: 100%; aspect-ratio: 16 / 10; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm); }
-    .category-lead:hover .category-lead-img img { transform: scale(1.08); }
-    .category-lead h5 { font-size: 16px; font-weight: 700; margin: 12px 0 2px; line-height: 1.42; color: var(--ink); }
-    .category-lead:hover h5 { color: var(--cat-accent); }
-
-    .news-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 28px 24px;
-    }
-    .news-grid-card { display: block; }
-    .news-grid-img {
-        width: 100%;
-        aspect-ratio: 16 / 10;
-        border-radius: var(--radius-md);
-        overflow: hidden;
-        margin-bottom: 14px;
-        box-shadow: var(--shadow-sm);
-    }
-    .news-grid-card:hover .news-grid-img img { transform: scale(1.05); }
-    .news-grid-card h5 {
-        font-size: 16.5px;
-        font-weight: 700;
-        line-height: 1.5;
-        color: var(--ink);
-        margin: 0;
-        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .news-grid-card:hover h5 { color: var(--cat-accent); }
-    .news-grid-card .news-meta.tiny { margin-top: 6px; }
-
-    .sidebar-col {
-        align-self: flex-start;
-        position: sticky;
-        top: 20px;
-    }
+    .sidebar-col { align-self: flex-start; position: sticky; top: 20px; }
     @media (min-width: 992px) {
         .sidebar-col { top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
     }
-    .sidebar-box {
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius-lg); padding: 22px; box-shadow: var(--shadow-sm);
-    }
-    .sidebar-title {
-        font-weight: 800; font-size: 18px; margin-bottom: 18px; padding-bottom: 14px;
-        border-bottom: 1px solid var(--border); color: var(--navy);
-    }
+    .sidebar-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px; box-shadow: var(--shadow-sm); }
+    .sidebar-title { font-weight: 800; font-size: 18px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); color: var(--navy); }
 
     .trending-list-v2 { list-style: none; margin: 0; padding: 0; }
-    .trending-list-v2 li {
-        display: flex;
-        align-items: flex-start;
-        gap: 14px;
-        padding: 18px 0;
-        border-bottom: 1px solid var(--border);
-    }
+    .trending-list-v2 li { display: flex; align-items: flex-start; gap: 14px; padding: 18px 0; border-bottom: 1px solid var(--border); }
     .trending-list-v2 li:last-child { border-bottom: none; }
-    .trend-num {
-        font-family: 'Source Serif 4', Georgia, serif;
-        font-size: 30px;
-        font-weight: 800;
-        color: var(--brand);
-        line-height: 1;
-        min-width: 32px;
-        flex-shrink: 0;
-    }
+    .trend-num { font-family: 'Source Serif 4', Georgia, serif; font-size: 30px; font-weight: 800; color: var(--brand); line-height: 1; min-width: 32px; flex-shrink: 0; }
     .trend-body { flex: 1; min-width: 0; }
-    .trend-body a {
-        display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-        font-size: 15px;
-        font-weight: 600;
-        color: var(--ink);
-        line-height: 1.45;
-    }
+    .trend-body a { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.45; }
     .trend-body a:hover { color: var(--brand); }
-    .trend-thumb {
-        width: 60px; height: 60px;
-        border-radius: 8px;
-        overflow: hidden;
-        flex-shrink: 0;
-    }
+    .trend-thumb { width: 60px; height: 60px; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
     .trending-list-v2 li:hover .trend-thumb img { transform: scale(1.1); }
     .trend-empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
 
-    .ad-banner-box {
-        border: 1px solid var(--border); border-radius: var(--radius-lg);
-        background: var(--surface-soft); text-align: center;
-        padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px;
-    }
+    .ad-banner-box { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-soft); text-align: center; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .ad-label { font-size: 10.5px; color: #a49a86; text-transform: uppercase; letter-spacing: 1.8px; font-weight: 700; }
-    .ad-banner-placeholder {
-        width: 100%; max-width: 970px; min-height: 110px;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        color: #b3a996; gap: 4px;
-    }
+    .ad-banner-placeholder { width: 100%; max-width: 970px; min-height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #b3a996; gap: 4px; }
     .ad-banner-placeholder i { font-size: 24px; opacity: .65; }
     .ad-banner-placeholder p { font-size: 12.5px; margin: 0; }
 
@@ -958,30 +840,23 @@
         .hero-main { aspect-ratio: 4 / 3; max-height: 320px; }
         .hero-side-row { grid-template-columns: 1fr; }
         .spotlight-card { flex-basis: 200px; }
-        .lead-feature-img { aspect-ratio: 4 / 3; }
         .ad-banner-placeholder { min-height: 80px; }
-        .headline-thumb { width: 68px; }
-        .headline-text { font-size: 14.5px; -webkit-line-clamp: 2; }
         .feed-item { padding: 22px 0; }
         .feed-item h3 { font-size: 19px; }
         .feed-item-caption { font-size: 13px; }
 
         .category-section { margin-top: 30px; padding-left: 12px; }
-        .news-grid { grid-template-columns: repeat(2, 1fr); gap: 20px 16px; }
         .cat-subnav-chip { font-size: 12px; padding: 4px 12px; }
-        .text-grid, .text-grid.cols-3 { grid-template-columns: 1fr; }
-        .block-lead { padding: 20px; }
-        .block-lead h3 { font-size: 19px; }
         .sub-widget-grid { grid-template-columns: 1fr; }
 
-        .category-block {
-            grid-template-columns: 1fr;
-            padding: 0; overflow: hidden; gap: 0;
-        }
-        .category-lead-img { aspect-ratio: 16 / 9; border-radius: 0; }
-        .category-lead h5 { padding: 0 14px; margin: 12px 0 2px; }
-        .category-lead .news-meta.tiny { padding: 0 14px 14px; margin-top: 0; }
-        .category-block .headline-list.compact { padding: 4px 14px 12px; }
+        .cat-stat-layout, .cat-biggrid-grid, .cat-iconcard-layout { grid-template-columns: 1fr; }
+        .cat-masonry-layout { column-count: 1; }
+        .cat-list-row { flex-direction: column; align-items: flex-start; }
+        .cat-list-img { width: 100%; }
+        .cat-minimal-img { width: 100%; }
+        .cat-minimal-card { flex-direction: column; }
+        .cat-biggrid-hero { max-height: 260px; }
+        .cat-biggrid-hero-overlay h3 { font-size: 18px; }
     }
 </style>
 @endpush
