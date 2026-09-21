@@ -53,18 +53,18 @@
     </div>
 
     <div class="col-lg-4">
-        <div class="sidebar-box mb-4">
-            <h5 class="sidebar-title">{{ __('site.related_news') }}</h5>
+        {{-- ================= RELATED NEWS ================= --}}
+        <div class="rel-box mb-4">
+            <h5 class="rel-title">{{ __('site.related_news') }}</h5>
+
             @forelse($related as $item)
-                <div class="related-item">
-                    <a href="{{ route('news.show', $item->slug) }}">
-                        <img src="{{ $item->image ? asset('storage/'.$item->image) : 'https://placehold.co/100x80?text=No+Image' }}" class="related-img">
-                    </a>
-                    <div>
-                        <a href="{{ route('news.show', $item->slug) }}" class="related-title">{{ $item->title }}</a>
-                        <div class="news-meta">{{ $item->published_at?->diffForHumans() }}</div>
-                    </div>
-                </div>
+                <a href="{{ route('news.show', $item->slug) }}" class="rel-item">
+                    <span class="rel-thumb">
+                        <img src="{{ $item->image ? asset('storage/'.$item->image) : 'https://placehold.co/200x175?text=No+Image' }}"
+                             alt="{{ $item->title }}" loading="lazy">
+                    </span>
+                    <span class="rel-text">{{ Str::limit($item->title, 85) }}</span>
+                </a>
             @empty
                 <p class="news-meta">{{ __('site.no_related_news') }}</p>
             @endforelse
@@ -123,12 +123,28 @@
     .share-btn.wa:hover { background: #25d366; color: #fff; }
     .share-btn.tg:hover { background: #0088cc; color: #fff; }
 
-    .sidebar-box { background: #fafafa; border: 1px solid #eee; border-radius: 6px; padding: 18px; }
-    .sidebar-title { font-weight: 800; margin-bottom: 16px; border-bottom: 2px solid #e30613; padding-bottom: 8px; display: inline-block; }
-    .related-item { display: flex; gap: 12px; margin-bottom: 16px; }
-    .related-img { width: 80px; height: 60px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
-    .related-title { font-size: 14px; font-weight: 600; color: #222; line-height: 1.4; display: block; }
-    .related-title:hover { color: #e30613; }
+    /* ===== related news: sano image bayaan, thulo bold title dahine, bich ma patalo line ===== */
+    .rel-box { background: transparent; border: none; box-shadow: none; padding: 0; }
+    .rel-title {
+        font-weight: 800; font-size: 20px; margin: 0 0 6px; padding-bottom: 10px;
+        border-bottom: 3px solid #e30613; display: inline-block;
+    }
+    .rel-item {
+        display: flex; align-items: center; gap: 18px;
+        padding: 22px 0; border-bottom: 1px solid #e6e1d8;
+    }
+    .rel-item:last-child { border-bottom: none; }
+    .rel-thumb {
+        flex-shrink: 0; width: 100px; aspect-ratio: 8 / 7;
+        border-radius: 8px; overflow: hidden; background: #f6f4f1;
+    }
+    .rel-thumb img {
+        display: block; width: 100%; height: 100%; object-fit: cover;
+        transition: transform .3s ease;
+    }
+    .rel-item:hover .rel-thumb img { transform: scale(1.08); }
+    .rel-text { font-size: 19px; font-weight: 800; line-height: 1.45; color: #16181c; }
+    .rel-item:hover .rel-text { color: #e30613; }
 
     .sidebar-ad-box { border: 1px dashed #ccc; border-radius: 6px; padding: 16px; text-align: center; }
     .ad-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
