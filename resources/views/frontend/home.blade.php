@@ -200,13 +200,21 @@
         <div class="hero-side-row mb-4">
             @foreach ($heroSide as $side)
                 <a href="{{ route('news.show', $side->slug) }}" class="hero-side-item">
+                    <div class="hero-side-header">
+                        @if ($side->category)
+                            <span class="badge-category small">{{ ($catName)($side) }}</span>
+                        @endif
+                        <h6>{{ Str::limit($side->title, 90) }}</h6>
+                        <div class="hero-side-meta">
+                            <span class="hero-side-avatar">{{ mb_substr($side->author->name ?? 'M', 0, 1) }}</span>
+                            <span class="hero-side-author">{{ $side->author->name ?? 'MeroNews' }}</span>
+                            <span class="meta-dot">•</span>
+                            <span class="hero-side-time"><i class="bi bi-clock"></i> {{ ($timeAgo)($side) }}</span>
+                        </div>
+                    </div>
                     <div class="hero-side-img-wrap">
                         <img src="{{ ($imgUrl)($side) }}" alt="{{ $side->title }}"
                              loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                    </div>
-                    <div class="hero-side-body">
-                        <h6>{{ Str::limit($side->title, 60) }}</h6>
-                        <div class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($side) }}</div>
                     </div>
                 </a>
             @endforeach
@@ -698,18 +706,30 @@
     .hero-title { font-size: 34px; font-weight: 800; line-height: 1.28; margin: 10px 0 4px; color: #fff; letter-spacing: -.2px; }
     .hero-main:hover .hero-title { color: #f4c6c6; }
 
-    .hero-side-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-    .hero-side-item {
-        display: flex; gap: 16px; background: var(--surface);
-        border: 1px solid var(--border); border-radius: var(--radius-md);
-        overflow: hidden; padding: 16px; box-shadow: var(--shadow-sm);
-        transition: box-shadow .25s var(--ease), transform .25s var(--ease), border-color .2s;
+    .hero-side-row { display: flex; flex-direction: column; gap: 36px; }
+    .hero-side-item { display: flex; flex-direction: column; }
+    .hero-side-item:hover img { transform: scale(1.05); }
+
+    /* text block: standalone, centered, separate from the image below it */
+    .hero-side-header { text-align: center; padding: 0 8px; margin-bottom: 18px; }
+    .hero-side-item h6 {
+        font-size: 40px; font-weight: 800; line-height: 1.4; margin: 10px 0 16px; color: var(--ink);
     }
-    .hero-side-item:hover { border-color: var(--brand); box-shadow: var(--shadow-md); transform: translateY(-3px); }
-    .hero-side-item:hover img { transform: scale(1.08); }
-    .hero-side-img-wrap { flex-shrink: 0; width: 150px; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; }
-    .hero-side-item h6 { font-size: 17px; font-weight: 800; margin: 2px 0 8px; line-height: 1.38; color: var(--ink); }
     .hero-side-item:hover h6 { color: var(--brand); }
+    .hero-side-meta {
+        display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+    }
+    .hero-side-avatar {
+        width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: #fff;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .hero-side-author { font-size: 13px; font-weight: 700; color: var(--ink); }
+    .hero-side-meta .meta-dot { opacity: .5; font-size: 13px; }
+    .hero-side-time { font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+
+    /* image: its own container below the text */
+    .hero-side-img-wrap { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm); }
 
     /* ===== spotlight ===== */
     .spotlight-scroll-wrap { position: relative; }
@@ -1042,8 +1062,8 @@
     .ad-banner-placeholder p { font-size: 12.5px; margin: 0; }
 
     @media (max-width: 768px) {
+        .hero-side-item h6 { font-size: 26px; }
         .hero-main { aspect-ratio: 4 / 3; max-height: 320px; }
-        .hero-side-row { grid-template-columns: 1fr; }
         .spotlight-card { flex-basis: 200px; }
         .ad-banner-placeholder { min-height: 80px; }
         .feed-item { padding: 22px 0; }
