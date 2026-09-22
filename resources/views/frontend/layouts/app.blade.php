@@ -213,7 +213,7 @@
         <div class="col-4 site-logo">
             <a href="{{ route('home') }}">
                 {{-- 👇 Dummy placeholder — imgbb bata aafno logo link haleर replace garnuhos --}}
-                <img src="https://i.ibb.co/0jqz1234/meronews-logo-placeholder.png" alt="MeroNews">
+                <img src="https://i.ibb.co/Jjnrcd62/jitesh-pradhan-production-png.png" alt="MeroNews">
                 <p class="brand-tagline">{{ __('site.tagline') }}</p>
             </a>
         </div>
@@ -253,7 +253,7 @@
         <div class="nav-mini-logo">
             <a href="{{ route('home') }}">
                 {{-- 👇 Yesma pani upar ko jasto aafno logo ko link halnus (imgbb wala replace garda dubai thau ma update garnus) --}}
-                <img src="https://i.ibb.co/0jqz1234/meronews-logo-placeholder.png" alt="MeroNews">
+                <img src="https://i.ibb.co/Jjnrcd62/jitesh-pradhan-production-png.png" alt="MeroNews">
             </a>
         </div>
         <ul class="nav">
