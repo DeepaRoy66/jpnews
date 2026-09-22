@@ -32,10 +32,74 @@
         .lang-switch { font-size: 13px !important; font-weight: 700; border: 1.5px solid #ddd; border-radius: 20px; padding: 5px 14px; color: #333 !important; }
         .lang-switch:hover { border-color: #e30613; background: #e30613; color: #fff !important; }
         .site-date { text-align: center; font-size: 14px; color: #666; padding: 8px 0; }
-        .category-nav { border-top: 1px solid #e5e5e5; border-bottom: 1px solid #e5e5e5; }
+
+        /* ===== Sticky category navbar ===== */
+        .category-nav {
+            border-top: 1px solid #1b4c96;
+            border-bottom: 1px solid #1b4c96;
+            background: #2260bf;
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+            padding: 0;
+            transition: box-shadow .25s ease, padding .25s ease;
+        }
+        .category-nav.is-stuck {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+            padding: 2px 0;
+        }
+        .category-nav .container { position: relative; }
+        .nav-mini-logo {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            transform: translateY(-50%) scale(.85);
+            pointer-events: none;
+            will-change: opacity, transform;
+            transition: opacity .2s ease, transform .2s ease;
+        }
+        .category-nav.is-stuck .nav-mini-logo {
+            opacity: 1;
+            transform: translateY(-50%) scale(1);
+            pointer-events: auto;
+        }
+        .nav-mini-logo img {
+            height: 44px;
+            width: 44px;
+            object-fit: contain;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: #fff;
+            padding: 2px;
+        }
+        .nav-actions {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            opacity: 0;
+            transform: translateY(-50%) scale(.85);
+            pointer-events: none;
+            will-change: opacity, transform;
+            transition: opacity .2s ease, transform .2s ease;
+        }
+        .category-nav.is-stuck .nav-actions {
+            opacity: 1;
+            transform: translateY(-50%) scale(1);
+            pointer-events: auto;
+        }
+        .nav-actions a { color: #fff; font-weight: 700; font-size: 19px; cursor: pointer; }
+        .nav-actions a:hover { color: #ffd94d; }
+        .nav-actions .lang-switch { font-size: 13px !important; font-weight: 800; border: 1.5px solid rgba(255,255,255,.6); border-radius: 20px; padding: 4px 12px; color: #fff !important; }
+        .nav-actions .lang-switch:hover { border-color: #fff; background: #fff; color: #2260bf !important; }
         .category-nav .nav { justify-content: center; flex-wrap: wrap; }
-        .category-nav .nav-link { color: #222; font-weight: 600; font-size: 15px; padding: 12px 18px; }
-        .category-nav .nav-link:hover, .category-nav .nav-link.active { color: #e30613; }
+        .category-nav .nav-link { color: #fff; font-weight: 800; font-size: 16px; padding: 12px 20px; }
+        .category-nav .nav-link:hover, .category-nav .nav-link.active { color: #ffd94d; }
 
         .newsletter-strip { background: linear-gradient(90deg, #e30613, #b8040f); color: #fff; padding: 28px 0; }
         .newsletter-strip h5 { font-weight: 800; margin-bottom: 4px; }
@@ -174,7 +238,7 @@
                 @endif
                 <a href="#" title="Menu"><i class="bi bi-list fs-3"></i></a>
                 <a href="#" title="Search"><i class="bi bi-search"></i></a>
-                <a href="#" id="themeToggle" title="Dark Mode"><i class="bi bi-moon"></i></a>
+                <a href="#" class="theme-toggle-btn" title="Dark Mode"><i class="bi bi-moon"></i></a>
             </div>
         </div>
     </div>
@@ -184,8 +248,14 @@
     {{ now()->format('l, F j, Y') }}
 </div>
 
-<nav class="category-nav">
+<nav class="category-nav" id="categoryNav">
     <div class="container">
+        <div class="nav-mini-logo">
+            <a href="{{ route('home') }}">
+                {{-- 👇 Yesma pani upar ko jasto aafno logo ko link halnus (imgbb wala replace garda dubai thau ma update garnus) --}}
+                <img src="https://i.ibb.co/0jqz1234/meronews-logo-placeholder.png" alt="MeroNews">
+            </a>
+        </div>
         <ul class="nav">
             <li class="nav-item"><a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">{{ __('site.latest_news') }}</a></li>
             @foreach($navCategories as $cat)
@@ -194,6 +264,16 @@
                 </li>
             @endforeach
         </ul>
+        <div class="nav-actions">
+            @if(app()->getLocale() === 'ne')
+                <a href="{{ $switchUrl }}" class="lang-switch" title="Switch to English">EN</a>
+            @else
+                <a href="{{ $switchUrl }}" class="lang-switch" title="{{ __('site.switch_to_nepali') }}">{{ __('site.nepali_label') }}</a>
+            @endif
+            <a href="#" title="Menu"><i class="bi bi-list fs-3"></i></a>
+            <a href="#" title="Search"><i class="bi bi-search"></i></a>
+            <a href="#" class="theme-toggle-btn" title="Dark Mode"><i class="bi bi-moon"></i></a>
+        </div>
     </div>
 </nav>
 
@@ -286,18 +366,37 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    document.getElementById('themeToggle').addEventListener('click', function (e) {
-        e.preventDefault();
-        document.body.classList.toggle('bg-dark');
-        document.body.classList.toggle('text-white');
+    document.querySelectorAll('.theme-toggle-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.body.classList.toggle('bg-dark');
+            document.body.classList.toggle('text-white');
+        });
     });
     const backToTop = document.getElementById('backToTop');
-    window.addEventListener('scroll', function () {
-        backToTop.style.display = window.scrollY > 300 ? 'flex' : 'none';
-    });
     backToTop.addEventListener('click', function () {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
+
+    // Sticky navbar mini-logo + back-to-top — single rAF-throttled scroll
+    // handler. Fixed pixel trigger (not a measured offsetTop) so it
+    // shows up right after a small scroll, reliably, on any page length.
+    const categoryNav = document.getElementById('categoryNav');
+    const STICKY_TRIGGER = 80; // px scrolled before mini-logo/shadow kicks in
+
+    let ticking = false;
+    function onScrollTick() {
+        const y = window.scrollY;
+        categoryNav.classList.toggle('is-stuck', y > STICKY_TRIGGER);
+        backToTop.style.display = y > 300 ? 'flex' : 'none';
+        ticking = false;
+    }
+    window.addEventListener('scroll', function () {
+        if (!ticking) {
+            window.requestAnimationFrame(onScrollTick);
+            ticking = true;
+        }
+    }, { passive: true });
 </script>
 
 </body>
