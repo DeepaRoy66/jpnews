@@ -33,6 +33,10 @@
     $defaultSectionLimit = 9;   // har category section ma kati news
     $minSectionItems     = 3;   // fresh news yo bhanda kam bhaye matra repeat le fill garcha
 
+    $sidebarMax          = 5;   // sidebar ma trending pachhi kati category tab dekhaune
+    $sidebarItemsPerBox  = 10;  // har tab ma maximum kati news (scroll garera herne)
+    $sidebarMin          = 8;   // fresh news kam bhaye yo number samma purano le fill garcha
+
     $imgUrl = function ($item) use ($placeholder) {
         if (empty($item->image)) {
             return $placeholder;
@@ -135,6 +139,20 @@
                 ->take(6)->values();
             $usedSlugs = $usedSlugs->merge($subItems->pluck('slug'));
 
+            // sidebar box ko news: main section ma nadekhieka (fresh) pahila
+            $sideFresh = $pool->reject(fn ($i) => $usedSlugs->contains($i->slug))
+                              ->take($sidebarItemsPerBox)->values();
+
+            if ($sideFresh->count() < $sidebarMin) {
+                $sideFill  = $pool->reject(fn ($i) => $sideFresh->contains('slug', $i->slug))
+                                  ->take($sidebarMin - $sideFresh->count());
+                $sideItems = $sideFresh->concat($sideFill)->values();
+            } else {
+                $sideItems = $sideFresh;
+            }
+
+            $usedSlugs = $usedSlugs->merge($sideFresh->pluck('slug'));
+
             $leadCatSlug = $lead->category->slug ?? null;
 
             $preparedSections->push([
@@ -146,6 +164,7 @@
                 'subcats'    => $section['subcats'] ?? [],
                 'subwidget'  => $subwidget,
                 'subItems'   => $subItems,
+                'sideItems'  => $sideItems,
                 'viewAllUrl' => $section['view_all_url'] ?? ($leadCatSlug ? route('category.show', $leadCatSlug) : null),
             ]);
         }
@@ -264,6 +283,49 @@
             @endforelse
         </div>
 
+    </div>{{-- /col-lg-8 (feed) --}}
+
+    {{-- ================= SIDEBAR (alag alag box, har box ko afnai fixed height + scroll) ================= --}}
+    @php
+        // box 1: trending, 10 samma (fresh pahila, kam bhaye trending bata fill)
+        $trendingTab = $trendingSidebar
+            ->concat($trendingAll->reject(fn ($t) => $trendingSidebar->contains('slug', $t->slug)))
+            ->take(10)->values();
+
+        // category box haru hataisakiyo — sidebar ma aba trending matra dekhinchha
+    @endphp
+
+    <div class="col-lg-4 sidebar-col">
+
+        {{-- ===== box 1: बढी पढिएका ===== --}}
+        <div class="sidebar-box side-box">
+            <h5 class="sidebar-title">{{ __('site.trending') }}</h5>
+            <ul class="trending-list-v2 side-scroll">
+                @forelse ($trendingTab as $index => $t)
+                    <li>
+                        <span class="trend-num">{{ $index + 1 }}</span>
+                        <div class="trend-body">
+                            <a href="{{ route('news.show', $t->slug) }}">{{ Str::limit($t->title, 70) }}</a>
+                            <div class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($t) }}</div>
+                        </div>
+                        <div class="trend-thumb">
+                            <img src="{{ ($imgUrl)($t) }}" alt="{{ $t->title }}"
+                                 loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
+                        </div>
+                    </li>
+                @empty
+                    <li class="trend-empty">{{ __('site.no_data') }}</li>
+                @endforelse
+            </ul>
+        </div>
+
+    </div>
+</div>
+
+
+    <div class="row">
+        <div class="col-12">
+
         {{-- ================= CATEGORY SECTIONS (pagination ko thau ma) ================= --}}
         @foreach ($preparedSections as $sec)
             @php
@@ -284,6 +346,11 @@
                     <div class="category-section-head">
                         <span class="category-icon-badge"><i class="bi {{ $secIcon }}"></i></span>
                         <h4 class="section-title cat-title">{{ $sec['title'] }}</h4>
+                        @if ($sec['viewAllUrl'])
+                            <a href="{{ $sec['viewAllUrl'] }}" class="view-all-link">
+                                {{ trans()->has('site.see_all') ? __('site.see_all') : 'सबै हेर्नुहोस्' }}
+                            </a>
+                        @endif
                     </div>
                 @endif
 
@@ -543,47 +610,8 @@
             </div>
         @endforeach
 
-        {{-- ================= PAGE ARROWS (category sections lai asar gardaina) ================= --}}
-        @if (method_exists($news, 'nextPageUrl') && ($news->previousPageUrl() || $news->nextPageUrl()))
-            <nav class="page-arrows" aria-label="Pagination">
-                @if ($news->previousPageUrl())
-                    <a href="{{ $news->previousPageUrl() }}" class="page-arrow" rel="prev" aria-label="Previous">
-                        <i class="bi bi-chevron-left"></i>
-                    </a>
-                @endif
-                @if ($news->nextPageUrl())
-                    <a href="{{ $news->nextPageUrl() }}" class="page-arrow" rel="next" aria-label="Next">
-                        <i class="bi bi-chevron-right"></i>
-                    </a>
-                @endif
-            </nav>
-        @endif
-    </div>
-
-    {{-- ================= SIDEBAR ================= --}}
-    <div class="col-lg-4 sidebar-col">
-        <div class="sidebar-box">
-            <h5 class="sidebar-title">{{ __('site.trending') }}</h5>
-            <ul class="trending-list-v2">
-                @forelse ($trendingSidebar as $index => $t)
-                    <li>
-                        <span class="trend-num">{{ $index + 1 }}</span>
-                        <div class="trend-body">
-                            <a href="{{ route('news.show', $t->slug) }}">{{ Str::limit($t->title, 70) }}</a>
-                            <div class="news-meta tiny"><i class="bi bi-clock"></i> {{ ($timeAgo)($t) }}</div>
-                        </div>
-                        <div class="trend-thumb">
-                            <img src="{{ ($imgUrl)($t) }}" alt="{{ $t->title }}"
-                                 loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ $placeholder }}';">
-                        </div>
-                    </li>
-                @empty
-                    <li class="trend-empty">{{ __('site.no_data') }}</li>
-                @endforelse
-            </ul>
         </div>
     </div>
-</div>
 
 @endsection
 
@@ -753,10 +781,12 @@
     .category-section-head .cat-title::before { display: none; }
     .cat-title { color: var(--ink); }
     .view-all-link {
-        font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap;
-        display: inline-flex; align-items: center; gap: 2px;
+        flex-shrink: 0; font-size: 12.5px; font-weight: 700; white-space: nowrap;
+        color: #fff; background: var(--brand);
+        padding: 6px 14px; border-radius: 999px;
+        transition: background .18s var(--ease);
     }
-    .view-all-link:hover { color: var(--cat-accent); }
+    .view-all-link:hover { background: #d43349; }
 
     .cat-subnav {
         display: flex; flex-wrap: nowrap; gap: 8px; margin-bottom: 20px;
@@ -956,9 +986,6 @@
 
     /* ===== sidebar ===== */
     .sidebar-col { align-self: flex-start; position: sticky; top: 20px; }
-    @media (min-width: 992px) {
-        .sidebar-col { top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
-    }
     .sidebar-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px; box-shadow: var(--shadow-sm); }
     .sidebar-title { font-weight: 800; font-size: 18px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); color: var(--navy); }
 
@@ -972,6 +999,40 @@
     .trend-thumb { width: 60px; height: 60px; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
     .trending-list-v2 li:hover .trend-thumb img { transform: scale(1.1); }
     .trend-empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+
+    /* sidebar scroll: thin scrollbar, box haru bich ma gap */
+    .sidebar-col { scrollbar-width: thin; scrollbar-color: #d8d2c6 transparent; padding-right: 4px; }
+    .sidebar-col::-webkit-scrollbar { width: 6px; }
+    .sidebar-col::-webkit-scrollbar-thumb { background: #d8d2c6; border-radius: 6px; }
+    .sidebar-box + .sidebar-box { margin-top: 20px; }
+
+    /* ===== sidebar: alag alag box, har box ko afnai fixed height ra scroll ===== */
+    .side-box { padding: 20px 22px 10px; }
+    .side-box .sidebar-title { margin-bottom: 4px; }
+
+    .side-cat { border-top: 3px solid var(--cat-accent); }
+    .side-cat-head {
+        display: flex; align-items: center; gap: 10px;
+        padding-bottom: 14px; border-bottom: 1px solid var(--border);
+    }
+    .side-cat-icon {
+        flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        background: color-mix(in srgb, var(--cat-accent) 12%, #fff);
+        color: var(--cat-accent); font-size: 15px;
+    }
+    .side-cat-title { font-size: 18px; font-weight: 800; color: var(--navy); }
+    a.side-cat-title:hover { color: var(--cat-accent); }
+    .side-cat .trend-num { color: var(--cat-accent); }
+
+    /* har box ko height fixed (max 470px). Bhitra ko news dherai bhayo bhane yehi box bhitra scroll huncha */
+    .side-scroll {
+        max-height: 470px; overflow-y: auto; padding-right: 8px;
+        scrollbar-width: thin; scrollbar-color: #d8d2c6 transparent;
+    }
+    .side-scroll::-webkit-scrollbar { width: 6px; }
+    .side-scroll::-webkit-scrollbar-thumb { background: #d8d2c6; border-radius: 6px; }
+    .side-scroll li { padding: 16px 0; }
 
     /* ===== ad ===== */
     .ad-banner-box { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-soft); text-align: center; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
