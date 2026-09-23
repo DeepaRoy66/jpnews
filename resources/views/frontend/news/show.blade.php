@@ -20,7 +20,7 @@
             <div class="author-info">
                 <div class="author-avatar">{{ mb_substr($news->author->name ?? 'M', 0, 1) }}</div>
                 <div>
-                    <div class="author-name">{{ $news->author->name ?? 'MeroNews' }}</div>
+                    <div class="author-name">{{ $news->author->name ?? 'JP News' }}</div>
                     <div class="news-meta">{{ $news->published_at?->format('F j, Y') }} • {{ $news->published_at?->diffForHumans() }}</div>
                 </div>
             </div>

@@ -23,7 +23,7 @@ return [
     'download_app' => 'Download Our App',
     'rights_reserved' => 'All rights reserved.',
     'terms' => 'Terms',
-    'author_fallback' => 'MeroNews',
+    'author_fallback' => 'JP News',
     'tagline' => 'Your trusted source of news',
     'switch_to_nepali' => 'View in Nepali',
     'nepali_label' => 'नेपाली',

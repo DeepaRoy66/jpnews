@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'MeroNews')</title>
+    <title>@yield('title', 'JP News')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -213,7 +213,7 @@
         <div class="col-4 site-logo">
             <a href="{{ route('home') }}">
                 {{-- 👇 Dummy placeholder — imgbb bata aafno logo link haleर replace garnuhos --}}
-                <img src="https://i.ibb.co/Jjnrcd62/jitesh-pradhan-production-png.png" alt="MeroNews">
+                <img src="https://i.ibb.co/Jjnrcd62/jitesh-pradhan-production-png.png" alt="JP News">
                 <p class="brand-tagline">{{ __('site.tagline') }}</p>
             </a>
         </div>
@@ -253,7 +253,7 @@
         <div class="nav-mini-logo">
             <a href="{{ route('home') }}">
                 {{-- 👇 Yesma pani upar ko jasto aafno logo ko link halnus (imgbb wala replace garda dubai thau ma update garnus) --}}
-                <img src="https://i.ibb.co/Jjnrcd62/jitesh-pradhan-production-png.png" alt="MeroNews">
+                <img src="https://i.ibb.co/Jjnrcd62/jitesh-pradhan-production-png.png" alt="JP News">
             </a>
         </div>
         <ul class="nav">
@@ -289,7 +289,7 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-4 col-md-6 mb-4">
-                <h5>MeroNews {{ __('site.about_us') }}</h5>
+                <h5>JP News {{ __('site.about_us') }}</h5>
                 <div class="footer-about">
                     <p>{{ __('site.about_text') }}</p>
                 </div>
@@ -336,7 +336,7 @@
                 <h5>{{ __('site.contact_address') }}</h5>
                 <ul class="footer-links footer-contact">
                     <li><i class="bi bi-geo-alt-fill"></i> {{ __('site.address') }}</li>
-                    <li><i class="bi bi-envelope-fill"></i> info@meronews.com</li>
+                    <li><i class="bi bi-envelope-fill"></i> info@JP News.com</li>
                     <li><i class="bi bi-telephone-fill"></i> {{ __('site.phone') }}</li>
                 </ul>
             </div>
@@ -345,7 +345,7 @@
 
     <div class="footer-bottom-bar">
         <div class="container footer-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div>&copy; {{ date('Y') }} MeroNews. {{ __('site.rights_reserved') }}</div>
+            <div>&copy; {{ date('Y') }} JP News. {{ __('site.rights_reserved') }}</div>
             <div class="footer-social footer-social--bottom">
                 <a href="#"><i class="bi bi-facebook"></i></a>
                 <a href="#"><i class="bi bi-instagram"></i></a>

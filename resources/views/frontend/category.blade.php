@@ -34,7 +34,7 @@
                             <div class="list-row-body">
                                 <h5><a href="{{ route('news.show', $item->slug) }}">{{ $item->title }}</a></h5>
                                 <p>{{ Str::limit($item->excerpt, 100) }}</p>
-                                <div class="news-meta"><i class="bi bi-person"></i> {{ $item->author->name ?? 'MeroNews' }} <span class="dot">•</span> {{ $item->published_at?->diffForHumans() }}</div>
+                                <div class="news-meta"><i class="bi bi-person"></i> {{ $item->author->name ?? 'JP News' }} <span class="dot">•</span> {{ $item->published_at?->diffForHumans() }}</div>
                             </div>
                         </div>
                     @empty

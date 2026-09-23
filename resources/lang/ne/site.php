@@ -23,7 +23,7 @@ return [
     'download_app' => 'एप डाउनलोड गर्नुहोस्',
     'rights_reserved' => 'सर्वाधिकार सुरक्षित।',
     'terms' => 'सर्तहरू',
-    'author_fallback' => 'MeroNews',
+    'author_fallback' => 'JP News',
     'tagline' => 'तपाईंको भरपर्दो समाचार स्रोत',
     'switch_to_nepali' => 'नेपालीमा हेर्नुहोस्',
     'nepali_label' => 'नेपाली',

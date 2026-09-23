@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'MeroNews')</title>
+    <title>@yield('title', 'JP News')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -94,7 +94,7 @@
         <div class="col-4 site-logo">
             <a href="{{ route('home') }}">
                 {{-- 👇 Dummy placeholder — imgbb bata aafno logo link haleर replace garnuhos --}}
-                <img src="https://i.ibb.co/0jqz1234/meronews-logo-placeholder.png" alt="MeroNews">
+                <img src="https://i.ibb.co/0jqz1234/JP News-logo-placeholder.png" alt="JP News">
                 <p class="brand-tagline">तपाईंको भरपर्दो समाचार स्रोत</p>
             </a>
         </div>
@@ -163,7 +163,7 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-4 col-md-6 mb-4">
-                <h5>MeroNews {{ __('site.about_us') }}</h5>
+                <h5>JP News {{ __('site.about_us') }}</h5>
                 <div class="footer-about">
                     <p>नेपालको भरपर्दो अनलाइन समाचार पोर्टल। हामी राजनीति, अर्थतन्त्र, खेलकुद, मनोरञ्जन र प्रविधिसम्बन्धी ताजा र विश्वसनीय समाचार २४ घण्टै प्रकाशित गर्दछौं।</p>
                 </div>
@@ -197,7 +197,7 @@
                 <h5>{{ __('site.contact_address') }}</h5>
                 <ul class="footer-links footer-contact">
                     <li><i class="bi bi-geo-alt-fill"></i> काठमाडौं, नेपाल</li>
-                    <li><i class="bi bi-envelope-fill"></i> info@meronews.com</li>
+                    <li><i class="bi bi-envelope-fill"></i> info@JP News.com</li>
                     <li><i class="bi bi-telephone-fill"></i> ०१-४xxxxxx</li>
                 </ul>
                 <h5 class="mt-4">{{ __('site.download_app') }}</h5>
@@ -208,7 +208,7 @@
             </div>
         </div>
         <div class="footer-bottom d-flex flex-wrap justify-content-between align-items-center">
-            <div>&copy; {{ date('Y') }} MeroNews. {{ __('site.rights_reserved') }}</div>
+            <div>&copy; {{ date('Y') }} JP News. {{ __('site.rights_reserved') }}</div>
             <div>
                 <a href="#">{{ __('site.privacy_policy') }}</a>
                 <a href="#">{{ __('site.terms') }}</a>

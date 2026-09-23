@@ -207,7 +207,7 @@
                         <h6>{{ Str::limit($side->title, 90) }}</h6>
                         <div class="hero-side-meta">
                             <span class="hero-side-avatar">{{ mb_substr($side->author->name ?? 'M', 0, 1) }}</span>
-                            <span class="hero-side-author">{{ $side->author->name ?? 'MeroNews' }}</span>
+                            <span class="hero-side-author">{{ $side->author->name ?? 'JP News' }}</span>
                             <span class="meta-dot">•</span>
                             <span class="hero-side-time"><i class="bi bi-clock"></i> {{ ($timeAgo)($side) }}</span>
                         </div>
