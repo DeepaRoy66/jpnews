@@ -136,9 +136,10 @@
             }
             .nav-toggler:active { background: rgba(255,255,255,.15); }
             .nav-mini-logo {
-                position: static; order: 2;
+                display: none; position: static; order: 2;
                 opacity: 1 !important; transform: none !important; pointer-events: auto !important;
             }
+            .category-nav.is-stuck .nav-mini-logo { display: flex; }
             .nav-actions {
                 position: static; order: 3; margin-left: auto; gap: 14px;
                 opacity: 1 !important; transform: none !important; pointer-events: auto !important;
